@@ -1,0 +1,20 @@
+{
+  "users": {
+    "auditor_001": {
+      "roles": ["expense_auditor"],
+      "allowed_actions": [
+        "expense:read",
+        "invoice:check",
+        "reimbursement:calculate",
+        "audit_opinion:generate"
+      ]
+    }
+  },
+  "business_rules": {
+    "project_a_limit": "25000",
+    "excluded_from_project_a": ["meal", "insurance"],
+    "forbidden_actions": ["approve_payment", "modify_budget", "modify_invoice"],
+    "reject_duplicate_invoice": true,
+    "reject_missing_receipt": true
+  }
+}

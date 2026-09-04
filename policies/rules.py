@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
+
+from policies.policy_loader import load_policy_document
 
 
 @dataclass(frozen=True)
@@ -21,11 +24,13 @@ class BusinessRules:
         return data
 
 
-def load_business_rules() -> BusinessRules:
+def load_business_rules(policy_path: Path | None = None) -> BusinessRules:
+    policy = load_policy_document(policy_path)
+    rules = policy["business_rules"]
     return BusinessRules(
-        project_a_limit=Decimal("25000"),
-        excluded_from_project_a={"meal", "insurance"},
-        forbidden_actions={"approve_payment", "modify_budget", "modify_invoice"},
-        reject_duplicate_invoice=True,
-        reject_missing_receipt=True,
+        project_a_limit=Decimal(str(rules["project_a_limit"])),
+        excluded_from_project_a=set(rules["excluded_from_project_a"]),
+        forbidden_actions=set(rules["forbidden_actions"]),
+        reject_duplicate_invoice=bool(rules["reject_duplicate_invoice"]),
+        reject_missing_receipt=bool(rules["reject_missing_receipt"]),
     )

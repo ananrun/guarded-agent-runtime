@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "guarded-agent-runtime": {
+      "command": "python",
+      "args": ["-m", "gateway.mcp_server"],
+      "cwd": "E:\\.Aproject\\desktop\\Ontology\\guarded-agent-runtime",
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    }
+  }
+}

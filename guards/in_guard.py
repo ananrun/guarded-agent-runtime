@@ -34,7 +34,7 @@ class InGuard:
         try:
             output = self.sandbox.run(tool.func, call.arguments)
             result = ToolResult(tool=call.name, allowed=True, result=output, reason=None)
-        except Exception as exc:  # pragma: no cover - demo safety net
+        except Exception as exc:  # pragma: no cover - 演示兜底
             result = ToolResult(
                 tool=call.name,
                 allowed=False,
