@@ -1,0 +1,50 @@
+{
+  "expense_id": "EXP-2026-001",
+  "applicant": "张三",
+  "project": "project_a",
+  "currency": "CNY",
+  "items": [
+    {
+      "name": "机票1",
+      "category": "flight",
+      "amount": 18461,
+      "invoice_no": "INV-FLIGHT-001",
+      "has_receipt": true
+    },
+    {
+      "name": "机票2",
+      "category": "flight",
+      "amount": 1809,
+      "invoice_no": "INV-FLIGHT-002",
+      "has_receipt": true
+    },
+    {
+      "name": "保险",
+      "category": "insurance",
+      "amount": 245,
+      "invoice_no": "INV-INS-001",
+      "has_receipt": true
+    },
+    {
+      "name": "伙食费",
+      "category": "meal",
+      "amount": 2365.89,
+      "invoice_no": "INV-MEAL-001",
+      "has_receipt": true
+    },
+    {
+      "name": "注册费",
+      "category": "registration",
+      "amount": 3766.47,
+      "invoice_no": "INV-REG-001",
+      "has_receipt": true
+    },
+    {
+      "name": "住宿费",
+      "category": "lodging",
+      "amount": 3589.65,
+      "invoice_no": "INV-HOTEL-001",
+      "has_receipt": true
+    }
+  ]
+}
