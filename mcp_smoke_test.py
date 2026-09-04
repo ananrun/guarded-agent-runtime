@@ -22,11 +22,11 @@ async def main() -> None:
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             tools = await session.list_tools()
-            context = await session.call_tool(
-                "guarded_context_build",
+            audit = await session.call_tool(
+                "guarded_expense_audit",
                 {
-                    "user_id": "auditor_001",
                     "user_request": "帮我审核这张差旅报销单，能报的直接生成审核意见。",
+                    "user_id": "auditor_001",
                 },
             )
 
@@ -35,7 +35,7 @@ async def main() -> None:
             {
                 "tool_count": len(tools.tools),
                 "tool_names": [tool.name for tool in tools.tools],
-                "context_call": [item.model_dump() for item in context.content],
+                "audit_call": [item.model_dump() for item in audit.content],
             },
             ensure_ascii=False,
             indent=2,

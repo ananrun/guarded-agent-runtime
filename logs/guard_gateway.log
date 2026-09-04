@@ -1,0 +1,43 @@
+2026-09-04 23:33:58 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:33:58 INFO guard_gateway Pre-Guard context_build session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:33:58 INFO guard_gateway In-Guard tool_call session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed tool=read_expense_form allowed=True reason=None
+2026-09-04 23:33:58 INFO guard_gateway In-Guard tool_call session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed tool=approve_payment allowed=False reason=拦截原因：approve_payment 属于禁止动作。
+2026-09-04 23:33:58 INFO guard_gateway Post-Guard output_review session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed attempt_no=1 passed=False reasons=['存在被事中拦截的工具调用：拦截原因：approve_payment 属于禁止动作。', '最终结果缺少 calculate_reimbursement 的真实工具返回依据。', '最终结果缺少 generate_audit_opinion 的真实工具返回依据。', '输出包含越权承诺：已提交付款。']
+2026-09-04 23:33:58 INFO guard_gateway Agent Loop attempt_start session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed attempt_no=2
+2026-09-04 23:33:58 INFO guard_gateway In-Guard tool_call session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed tool=check_invoice allowed=True reason=None
+2026-09-04 23:33:58 INFO guard_gateway In-Guard tool_call session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed tool=calculate_reimbursement allowed=True reason=None
+2026-09-04 23:33:58 INFO guard_gateway In-Guard tool_call session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed tool=generate_audit_opinion allowed=True reason=None
+2026-09-04 23:33:58 INFO guard_gateway Post-Guard output_review session_id=43f3dbae-3a27-4d63-be21-0001dd0116ed attempt_no=2 passed=True reasons=[]
+2026-09-04 23:34:00 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:34:00 INFO guard_gateway Pre-Guard context_build session_id=899666a9-483e-4e31-b4f1-963d25acb444 user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:37:10 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:37:10 INFO guard_gateway Pre-Guard context_build session_id=509deff8-ffe0-4fd2-8abc-944772641478 user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:39:15 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:39:27 INFO guard_gateway Pre-Guard context_build session_id=5e18ec71-c947-4250-beea-7e2537598c24 user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:39:29 INFO guard_gateway In-Guard tool_call session_id=5e18ec71-c947-4250-beea-7e2537598c24 tool=list_expense_forms allowed=True reason=None
+2026-09-04 23:39:30 INFO guard_gateway In-Guard tool_call session_id=5e18ec71-c947-4250-beea-7e2537598c24 tool=read_expense_form allowed=True reason=None
+2026-09-04 23:39:33 INFO guard_gateway In-Guard tool_call session_id=5e18ec71-c947-4250-beea-7e2537598c24 tool=check_invoice allowed=True reason=None
+2026-09-04 23:39:34 INFO guard_gateway In-Guard tool_call session_id=5e18ec71-c947-4250-beea-7e2537598c24 tool=calculate_reimbursement allowed=True reason=None
+2026-09-04 23:39:38 INFO guard_gateway In-Guard tool_call session_id=5e18ec71-c947-4250-beea-7e2537598c24 tool=generate_audit_opinion allowed=True reason=None
+2026-09-04 23:39:45 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:39:56 INFO guard_gateway Post-Guard output_review session_id=5e18ec71-c947-4250-beea-7e2537598c24 attempt_no=1 passed=False reasons=['输出格式缺少字段：source_tools。']
+2026-09-04 23:39:59 INFO guard_gateway Post-Guard output_review session_id=5e18ec71-c947-4250-beea-7e2537598c24 attempt_no=1 passed=True reasons=[]
+2026-09-04 23:48:46 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:48:46 INFO guard_gateway Pre-Guard context_build session_id=41455711-218a-431c-888e-024445435d26 user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=41455711-218a-431c-888e-024445435d26 tool=list_expense_forms allowed=True reason=None
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=41455711-218a-431c-888e-024445435d26 tool=read_expense_form allowed=True reason=None
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=41455711-218a-431c-888e-024445435d26 tool=check_invoice allowed=True reason=None
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=41455711-218a-431c-888e-024445435d26 tool=calculate_reimbursement allowed=True reason=None
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=41455711-218a-431c-888e-024445435d26 tool=generate_audit_opinion allowed=True reason=None
+2026-09-04 23:48:46 INFO guard_gateway Post-Guard output_review session_id=41455711-218a-431c-888e-024445435d26 attempt_no=1 passed=True reasons=[]
+2026-09-04 23:48:46 INFO guard_gateway Pre-Guard context_build session_id=07e0aa7e-50c2-4746-9929-03e9b06518ce user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:48:46 INFO guard_gateway In-Guard tool_call session_id=07e0aa7e-50c2-4746-9929-03e9b06518ce tool=approve_payment allowed=False reason=拦截原因：approve_payment 属于禁止动作。
+2026-09-04 23:48:46 INFO guard_gateway Post-Guard output_review session_id=07e0aa7e-50c2-4746-9929-03e9b06518ce attempt_no=1 passed=False reasons=['存在被事中拦截的工具调用：拦截原因：approve_payment 属于禁止动作。', '最终结果缺少 calculate_reimbursement 的真实工具返回依据。', '最终结果缺少 generate_audit_opinion 的真实工具返回依据。', '输出包含越权承诺：已提交付款。']
+2026-09-04 23:48:48 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-04 23:48:48 INFO guard_gateway Pre-Guard context_build session_id=4da47510-da3e-41f1-af50-25f97fba55c2 user_id=auditor_001 allowed_tools=['list_expense_forms', 'read_expense_form', 'check_invoice', 'calculate_reimbursement', 'generate_audit_opinion']
+2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=list_expense_forms allowed=True reason=None
+2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=read_expense_form allowed=True reason=None
+2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=check_invoice allowed=True reason=None
+2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=calculate_reimbursement allowed=True reason=None
+2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=generate_audit_opinion allowed=True reason=None
+2026-09-04 23:48:48 INFO guard_gateway Post-Guard output_review session_id=4da47510-da3e-41f1-af50-25f97fba55c2 attempt_no=1 passed=True reasons=[]

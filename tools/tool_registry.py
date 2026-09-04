@@ -51,6 +51,12 @@ def build_expense_tool_registry(data_path: Path, rules: BusinessRules) -> ToolRe
     return ToolRegistry(
         [
             ToolSpec(
+                name="list_expense_forms",
+                func=expense_tools.list_expense_forms,
+                required_permission="expense:list",
+                schema={},
+            ),
+            ToolSpec(
                 name="read_expense_form",
                 func=expense_tools.read_expense_form,
                 required_permission="expense:read",

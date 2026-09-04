@@ -24,6 +24,7 @@ class GuardGatewayHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         routes = {
+            "/expense/audit": self._expense_audit,
             "/context/build": self._context_build,
             "/attempt/start": self._attempt_start,
             "/tools/call": self._tools_call,
@@ -41,6 +42,15 @@ class GuardGatewayHandler(BaseHTTPRequestHandler):
         return self.service.build_context(
             user_id=body.get("user_id", "auditor_001"),
             user_request=body["user_request"],
+        )
+
+    def _expense_audit(self) -> dict[str, Any]:
+        body = self._read_body()
+        return self.service.audit_expense(
+            user_id=body.get("user_id", "auditor_001"),
+            user_request=body["user_request"],
+            expense_id=body.get("expense_id"),
+            project=body.get("project", "project_a"),
         )
 
     def _tools_call(self) -> dict[str, Any]:

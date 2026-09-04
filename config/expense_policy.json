@@ -3,6 +3,7 @@
     "auditor_001": {
       "roles": ["expense_auditor"],
       "allowed_actions": [
+        "expense:list",
         "expense:read",
         "invoice:check",
         "reimbursement:calculate",

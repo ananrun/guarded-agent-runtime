@@ -17,6 +17,21 @@ class ExpenseTools:
         self.data_path = data_path
         self.rules = rules
 
+    def list_expense_forms(self) -> dict[str, Any]:
+        data = self._load()
+        return {
+            "items": [
+                {
+                    "expense_id": data["expense_id"],
+                    "applicant": data["applicant"],
+                    "project": data["project"],
+                    "currency": data["currency"],
+                    "item_count": len(data["items"]),
+                    "note": "Demo 环境只有这一张示例报销单。",
+                }
+            ]
+        }
+
     def read_expense_form(self, expense_id: str) -> dict[str, Any]:
         data = self._load()
         if data["expense_id"] != expense_id:

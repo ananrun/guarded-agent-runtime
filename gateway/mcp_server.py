@@ -22,7 +22,24 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def guarded_context_build(user_id: str, user_request: str) -> dict[str, Any]:
+def guarded_expense_audit(
+    user_request: str,
+    user_id: str = "auditor_001",
+    expense_id: str | None = None,
+    project: str = "project_a",
+) -> dict[str, Any]:
+    """一站式受控报销审核：内部强制执行事前约束、事中拦截和事后复核。"""
+
+    return service.audit_expense(
+        user_request=user_request,
+        user_id=user_id,
+        expense_id=expense_id,
+        project=project,
+    )
+
+
+@mcp.tool()
+def guarded_context_build(user_request: str, user_id: str = "auditor_001") -> dict[str, Any]:
     """事前约束：生成受控上下文、工具白名单、禁止动作和业务规则。"""
 
     return service.build_context(user_id=user_id, user_request=user_request)
@@ -38,6 +55,17 @@ def guarded_tool_call(
         session_id=session_id,
         tool_name=tool_name,
         arguments=arguments,
+    )
+
+
+@mcp.tool()
+def guard_list_expense_forms(session_id: str) -> dict[str, Any]:
+    """受控列出可审核的 Demo 报销单。"""
+
+    return service.call_tool(
+        session_id=session_id,
+        tool_name="list_expense_forms",
+        arguments={},
     )
 
 

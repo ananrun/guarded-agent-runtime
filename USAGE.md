@@ -1,31 +1,65 @@
 # 使用文档
 
-这份文档说明如何把 Guarded Agent Runtime 用作外部 Agent 平台的受控业务工具网关，重点以 QwenPaw 接入为例。
+这份文档说明如何把 Guarded Agent Runtime 接入 QwenPaw。当前推荐方式是：**让 QwenPaw 调用一个一站式 MCP 工具 `guarded_expense_audit`**。事前约束、事中拦截、事后复核都封装在这个工具内部，尽量减少对 Agent instructions 的依赖。
 
-## 1. 安装依赖
+## 1. 核心结论
 
-HTTP 网关只使用 Python 标准库。MCP 接入需要 `mcp` 包。
+只注册 MCP Server 以后，QwenPaw 只会“看到工具”，不会自动知道什么时候必须调用哪个工具。
 
-```bash
+要做到接近自动，有两种方式：
+
+```text
+最佳方式：在 QwenPaw 里配置工具触发规则或 workflow 路由。
+退路方式：给 QwenPaw Agent 加一条很短的 instructions，让报销审核类请求优先调用 guarded_expense_audit。
+```
+
+本项目已经把复杂流程封装成一个工具：
+
+```text
+guarded_expense_audit
+```
+
+它内部会自动执行：
+
+```text
+Pre-Guard：生成受控上下文、权限、业务规则、工具白名单、禁止动作。
+In-Guard：列报销单、读报销单、验票、计算、生成意见时逐步硬拦截。
+Post-Guard：复核最终答案是否可信、合规、可追溯。
+```
+
+## 2. 完整使用流程
+
+### 第一步：进入项目目录
+
+```powershell
 cd E:\.Aproject\desktop\Ontology\guarded-agent-runtime
+```
+
+### 第二步：安装依赖
+
+HTTP 网关只用 Python 标准库。MCP 接入需要 `mcp` 包。
+
+```powershell
 pip install -r requirements.txt
 ```
 
-如果当前环境已经有 `mcp`，可以直接跳过安装。
+如果你的环境已经有 `mcp`，可以跳过。
 
-## 2. 本地确认 MCP Server 可用
+### 第三步：确认 MCP Server 正常
 
-执行：
-
-```bash
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+$env:PYTHONDONTWRITEBYTECODE='1'
 python mcp_smoke_test.py
 ```
 
-正常结果会列出这些工具：
+正常时会看到 `guarded_expense_audit`，以及其他调试工具：
 
 ```text
+guarded_expense_audit
 guarded_context_build
 guarded_tool_call
+guard_list_expense_forms
 guard_read_expense_form
 guard_check_invoice
 guard_calculate_reimbursement
@@ -36,11 +70,33 @@ guarded_audit_logs
 guarded_policy_reload
 ```
 
-这一步通过后，说明 QwenPaw 也可以用同样的命令启动这个 MCP Server。
+### 第四步：打开日志监听窗口
 
-## 3. 在 QwenPaw 中添加 MCP Server
+重新开一个 PowerShell 窗口：
 
-如果 QwenPaw 支持 `mcpServers` 配置，参考：
+```powershell
+cd E:\.Aproject\desktop\Ontology\guarded-agent-runtime
+Get-Content .\logs\guard_gateway.log -Wait -Encoding UTF8
+```
+
+结构化审计日志：
+
+```powershell
+cd E:\.Aproject\desktop\Ontology\guarded-agent-runtime
+Get-Content .\logs\audit.jsonl -Wait -Encoding UTF8
+```
+
+不要用下面命令有没有输出判断日志是否正常：
+
+```powershell
+python -m gateway.mcp_server
+```
+
+这是 stdio MCP Server。它通过标准输入输出和 QwenPaw 通信，不能随便往 stdout 打普通日志。运行日志会写入 `logs/` 目录。
+
+### 第五步：在 QwenPaw 添加 MCP 客户端
+
+在 QwenPaw 的“创建客户端 / JSON 导入”里填：
 
 ```json
 {
@@ -58,169 +114,133 @@ guarded_policy_reload
 }
 ```
 
-同样的示例文件在：
+如果 QwenPaw 找不到 `python`，把 `command` 改成完整路径，例如：
 
-```text
-integrations/qwenpaw_mcp_config.example.json
+```json
+"command": "D:\\Python\\Python313\\python.exe"
 ```
 
-如果 QwenPaw 是 UI 里添加 MCP，填写：
+如果 QwenPaw 运行在 Docker、WSL 或远程服务器里，`cwd` 要改成那个环境能访问到的路径。
+
+### 第六步：配置自动触发
+
+如果 QwenPaw 支持工具触发规则、工作流路由或意图路由，配置：
 
 ```text
-名称：guarded-agent-runtime
-命令：python
-参数：-m gateway.mcp_server
-工作目录：E:\.Aproject\desktop\Ontology\guarded-agent-runtime
-环境变量：
-  PYTHONIOENCODING=utf-8
-  PYTHONDONTWRITEBYTECODE=1
+当用户请求包含：报销、差旅、费用审核
+自动调用：guarded_expense_audit
 ```
 
-如果 QwenPaw 在 Docker、WSL 或远程服务器里运行，`cwd` 要改成那个环境能访问到的项目路径。
+这是真正更接近“接入后自动”的方式。
 
-## 4. 给 QwenPaw Agent 加执行约束
-
-把下面文件里的内容加入 QwenPaw 对应 Agent 的 system prompt 或 instructions：
+如果 QwenPaw 当前没有这种配置能力，就把这个最小提示词放进对应 Agent 的 system prompt 或 instructions：
 
 ```text
 integrations/qwenpaw_agent_instructions.md
 ```
 
-核心要求是：
+这份提示词只要求一件事：
 
 ```text
-收到业务请求后，先调用 guarded_context_build。
-调用业务工具时，必须携带 session_id。
-最终答案必须调用 guarded_output_review。
-只有 review passed=true，才输出给用户。
+报销审核类请求优先调用 guarded_expense_audit。
 ```
 
-## 4.1 QwenPaw Agent Loop 中什么时候调用网关
+三阶段流程已经封装在 `guarded_expense_audit` 内部，不再需要 QwenPaw 自己按顺序调用多个工具。
 
-QwenPaw 的 Agent Loop 仍然在 QwenPaw 里运行。本项目不是替代它的循环，而是作为循环里的必经检查点。
+### 第七步：重启或刷新 QwenPaw 的 MCP 客户端
 
-```mermaid
-sequenceDiagram
-    participant User as 用户
-    participant QwenPaw as QwenPaw Agent Loop
-    participant Guard as Guard Gateway / MCP
-    participant Biz as 真实业务系统
-
-    User->>QwenPaw: 帮我审核报销单
-
-    QwenPaw->>Guard: guarded_context_build
-    Guard-->>QwenPaw: 返回规则、权限、工具白名单、禁止动作、session_id
-
-    loop QwenPaw 自己的 Agent Loop
-        QwenPaw->>QwenPaw: 推理、规划下一步
-
-        alt 需要调用业务工具
-            QwenPaw->>Guard: guard_* / guarded_tool_call
-            Guard->>Guard: In-Guard 校验权限、参数、白名单、黑名单
-            alt 允许
-                Guard->>Biz: 调用真实业务工具
-                Biz-->>Guard: 返回真实结果
-                Guard-->>QwenPaw: 返回工具结果
-            else 拦截
-                Guard-->>QwenPaw: 返回拦截原因
-            end
-        end
-
-        alt 生成候选最终答案
-            QwenPaw->>Guard: guarded_output_review
-            Guard->>Guard: Post-Guard 复核金额、依据、规则、越权承诺
-            alt 通过
-                Guard-->>QwenPaw: passed=true
-                QwenPaw-->>User: 输出答案
-            else 失败
-                Guard-->>QwenPaw: passed=false + reasons
-                QwenPaw->>Guard: guarded_attempt_start
-                QwenPaw->>QwenPaw: 根据 reasons 重新规划
-            end
-        end
-    end
-```
-
-不是每个 token 都调用网关，但这几个点必须调用：
+确认 QwenPaw 能看到：
 
 ```text
-任务开始时：调用 guarded_context_build。
-每次业务工具调用前：调用 guard_* 或 guarded_tool_call。
-每次候选最终答案输出前：调用 guarded_output_review。
-每次复核失败后要重试：调用 guarded_attempt_start。
+guarded_expense_audit
 ```
 
-如果 QwenPaw 自己的内置工具在这些检查点之前就直接准备环境、开 Shell、读文件、联网或调用业务 API，本项目拦不到。要强控制，必须撤掉这些直连权限，或者在 QwenPaw 的 middleware、plugin、workflow 中强制接入网关。
+如果看不到，说明 QwenPaw 还在用旧配置或旧进程。
 
-## 5. 禁用或替换直连业务系统的工具
+### 第八步：在 QwenPaw 里提问
 
-这是能不能受控的关键。
-
-应该保留：
+输入：
 
 ```text
-Guard Gateway MCP 工具
-普通非敏感聊天能力
-必要但受限的搜索、文件、浏览器能力
+帮我审核报销单
 ```
 
-应该禁用或替换：
+正常情况下，QwenPaw 应该调用：
 
 ```text
-直接付款工具
-直接修改预算工具
-直接写数据库工具
-直接访问报销系统 API 的工具
-拥有敏感目录权限的 Shell 或文件工具
+guarded_expense_audit
 ```
 
-如果 QwenPaw 仍然能绕过 MCP 直接调用真实业务工具，本项目无法拦截。
-
-## 6. 在 QwenPaw 中测试
-
-用户提问：
+不要再让 QwenPaw 自己编排：
 
 ```text
-帮我审核这张差旅报销单，能报的直接生成审核意见。
+guarded_context_build -> guard_list_expense_forms -> guard_read_expense_form -> ...
 ```
 
-期望工具调用顺序：
+这些步骤已经由 `guarded_expense_audit` 在内部强制执行。
+
+## 3. 如何看是否正常
+
+日志窗口应该出现类似内容：
 
 ```text
-guarded_context_build
-guard_read_expense_form
-guard_check_invoice
-guard_calculate_reimbursement
-guard_generate_audit_opinion
-guarded_output_review
+Pre-Guard context_build session_id=... user_id=auditor_001 allowed_tools=[...]
+In-Guard tool_call session_id=... tool=list_expense_forms allowed=True reason=None
+In-Guard tool_call session_id=... tool=read_expense_form allowed=True reason=None
+In-Guard tool_call session_id=... tool=check_invoice allowed=True reason=None
+In-Guard tool_call session_id=... tool=calculate_reimbursement allowed=True reason=None
+In-Guard tool_call session_id=... tool=generate_audit_opinion allowed=True reason=None
+Post-Guard output_review session_id=... attempt_no=1 passed=True reasons=[]
 ```
 
-如果 Agent 尝试执行：
+这些日志虽然来自 `guarded_expense_audit` 的内部步骤，但仍然完整体现事前、事中、事后。
+
+正常标准：
 
 ```text
-approve_payment
+QwenPaw 能看到 guarded_expense_audit。
+用户提问后日志有 Pre-Guard context_build。
+allowed_tools 不是空列表。
+日志中出现 list_expense_forms、read_expense_form、check_invoice、calculate_reimbursement、generate_audit_opinion。
+最终有 Post-Guard output_review passed=True。
 ```
 
-只能通过 `guarded_tool_call` 提交给网关，网关会返回：
+不正常信号：
 
 ```text
-拦截原因：approve_payment 属于禁止动作。
+日志完全没有新增：QwenPaw 没有连到 MCP Server，或没有调用 guarded_expense_audit。
+allowed_tools=[]：user_id 没匹配到权限，或策略没加载成功。
+QwenPaw 继续问报销单号：没有调用 guarded_expense_audit，或没有重新加载最新 MCP 工具。
+QwenPaw 说已经付款：没有调用 guarded_expense_audit，或仍有直连业务工具。
 ```
 
-此时 QwenPaw 不能说“已付款”。
+## 4. 本地模拟
 
-## 7. HTTP 网关用法
+执行：
+
+```powershell
+python external_platform_demo.py
+```
+
+它会展示两件事：
+
+```text
+auto_audit：模拟 QwenPaw 只调用 guarded_expense_audit，一次完成审核。
+manual_violation：模拟分步调试时尝试 approve_payment，被 In-Guard 拦截。
+```
+
+## 5. HTTP 网关
 
 如果平台不接 MCP，但支持 HTTP Tool 或 Webhook，可以启动 HTTP 网关：
 
-```bash
+```powershell
 python app.py --host 127.0.0.1 --port 8765
 ```
 
-### 事前约束
+一站式审核接口：
 
 ```text
-POST /context/build
+POST /expense/audit
 ```
 
 请求：
@@ -228,114 +248,22 @@ POST /context/build
 ```json
 {
   "user_id": "auditor_001",
-  "user_request": "帮我审核这张差旅报销单，能报的直接生成审核意见。"
+  "user_request": "帮我审核报销单"
 }
 ```
 
-返回 `session_id`、用户权限、业务规则、工具白名单和禁止动作。
-
-### 事中拦截
+底层调试接口：
 
 ```text
+POST /context/build
 POST /tools/call
-```
-
-请求：
-
-```json
-{
-  "session_id": "<session_id>",
-  "tool_name": "calculate_reimbursement",
-  "arguments": {
-    "expense_id": "EXP-2026-001",
-    "project": "project_a"
-  }
-}
-```
-
-### 事后复核
-
-```text
 POST /review/output
-```
-
-请求：
-
-```json
-{
-  "session_id": "<session_id>",
-  "final_answer": {
-    "status": "passed",
-    "message": "项目A可报销 25000.0 元；其他渠道承担 5237.01 元；餐费、保险费不得计入项目A；本意见不执行付款。",
-    "project_a_reimbursable": 25000.0,
-    "other_channel_amount": 5237.01,
-    "not_allowed_in_project_a": [
-      {
-        "name": "保险",
-        "category": "insurance",
-        "amount": 245.0,
-        "reason": "业务规则禁止计入项目A"
-      },
-      {
-        "name": "伙食费",
-        "category": "meal",
-        "amount": 2365.89,
-        "reason": "业务规则禁止计入项目A"
-      }
-    ],
-    "exceptions": [],
-    "source_tools": [
-      "read_expense_form",
-      "check_invoice",
-      "calculate_reimbursement",
-      "generate_audit_opinion"
-    ],
-    "forbidden_commitments": []
-  }
-}
-```
-
-通过时返回：
-
-```json
-{
-  "passed": true,
-  "reasons": [],
-  "action": "allow_output",
-  "message": "复核通过，可以输出给用户。"
-}
-```
-
-失败时返回：
-
-```json
-{
-  "passed": false,
-  "reasons": [
-    "最终结果缺少 calculate_reimbursement 的真实工具返回依据。",
-    "输出包含越权承诺：已提交付款。"
-  ],
-  "action": "retry_or_human_confirm"
-}
-```
-
-## 8. Agent Loop 重试
-
-如果复核失败，平台要让 Agent 重试，应先开启新轮次：
-
-```text
 POST /attempt/start
+POST /policies/reload
+GET  /audit/logs
 ```
 
-或 MCP 工具：
-
-```text
-guarded_attempt_start
-```
-
-这样上一轮被拦截的调用仍然保留在审计日志里，但不会阻止下一轮合规答案通过复核。
-
-## 9. 修改规则
+## 6. 修改规则
 
 编辑：
 
@@ -355,44 +283,19 @@ config/expense_policy.json
 缺失票据规则
 ```
 
-HTTP 模式重载：
-
-```text
-POST /policies/reload
-```
-
 MCP 模式重载：
 
 ```text
 guarded_policy_reload
 ```
 
-## 10. 本地模拟完整接入链路
-
-执行：
-
-```bash
-python external_platform_demo.py
-```
-
-这个脚本模拟外部平台已经完成 MCP 或 HTTP 接入后的流程：
+HTTP 模式重载：
 
 ```text
-第一轮：
-  调用事前约束
-  读取报销单
-  尝试付款，被拦截
-  提交违规答案，复核失败
-
-第二轮：
-  开启新 attempt
-  核验发票
-  计算报销金额
-  生成审核意见
-  提交复核，通过
+POST /policies/reload
 ```
 
-## 11. 当前 Demo 的正确结果
+## 7. 当前 Demo 的正确结果
 
 ```text
 项目A可报销金额：25000.0 元
