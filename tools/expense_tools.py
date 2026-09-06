@@ -9,15 +9,19 @@ from policies.rules import BusinessRules
 
 
 def money(value: Decimal) -> float:
+    # 金额统一保留两位小数，避免 float 直接参与财务计算。
     return float(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 class ExpenseTools:
+    """差旅报销 Demo 的业务工具实现。"""
+
     def __init__(self, data_path: Path, rules: BusinessRules) -> None:
         self.data_path = data_path
         self.rules = rules
 
     def list_expense_forms(self) -> dict[str, Any]:
+        # QwenPaw 这类外部平台可能不知道 expense_id，先给它一个受控列表入口。
         data = self._load()
         return {
             "items": [
@@ -33,12 +37,14 @@ class ExpenseTools:
         }
 
     def read_expense_form(self, expense_id: str) -> dict[str, Any]:
+        # 这里只读取示例数据；真实系统可替换成数据库或报销系统 API。
         data = self._load()
         if data["expense_id"] != expense_id:
-            raise ValueError(f"expense_id {expense_id} not found")
+            raise ValueError(f"报销单 {expense_id} 不存在")
         return data
 
     def check_invoice(self, expense_id: str) -> dict[str, Any]:
+        # 发票核验结果作为后续计算和复核的真实依据。
         data = self.read_expense_form(expense_id)
         seen = set()
         duplicate_items = []
@@ -59,7 +65,7 @@ class ExpenseTools:
 
     def calculate_reimbursement(self, expense_id: str, project: str) -> dict[str, Any]:
         if project != "project_a":
-            raise ValueError("demo only supports project_a")
+            raise ValueError("Demo 当前只支持 project_a")
 
         data = self.read_expense_form(expense_id)
         eligible_total = Decimal("0")
@@ -75,6 +81,7 @@ class ExpenseTools:
 
         for item in data["items"]:
             amount = Decimal(str(item["amount"]))
+            # 保险费、餐费等排除项不能进入项目A，只能计入其他渠道或人工处理。
             if item["category"] in self.rules.excluded_from_project_a:
                 excluded_total += amount
                 not_allowed.append(
@@ -88,6 +95,7 @@ class ExpenseTools:
             else:
                 eligible_total += amount
 
+        # 项目A金额受项目限额控制，超限部分转入其他渠道金额。
         project_a_amount = min(eligible_total, self.rules.project_a_limit)
         over_limit = max(Decimal("0"), eligible_total - self.rules.project_a_limit)
         other_channel = excluded_total + over_limit
@@ -110,7 +118,8 @@ class ExpenseTools:
         include_payment_commitment: bool = False,
     ) -> dict[str, Any]:
         if include_payment_commitment:
-            raise ValueError("audit opinion tool cannot include payment commitments")
+            raise ValueError("审核意见工具不能生成付款承诺")
+        # 该工具只生成审核意见，不执行付款、改预算或改票据。
         return {
             "expense_id": expense_id,
             "opinion": (
@@ -121,5 +130,6 @@ class ExpenseTools:
         }
 
     def _load(self) -> dict[str, Any]:
+        # Demo 数据每次从文件读取，便于你直接修改 data/sample_expense.json 做测试。
         with self.data_path.open("r", encoding="utf-8") as fh:
             return json.load(fh)

@@ -11,11 +11,11 @@
       ]
     }
   },
-  "business_rules": {
-    "project_a_limit": "25000",
-    "excluded_from_project_a": ["meal", "insurance"],
-    "forbidden_actions": ["approve_payment", "modify_budget", "modify_invoice"],
-    "reject_duplicate_invoice": true,
-    "reject_missing_receipt": true
+  "user_aliases": {
+    "": "auditor_001",
+    "default": "auditor_001",
+    "demo": "auditor_001",
+    "user": "auditor_001",
+    "current_user": "auditor_001"
   }
 }

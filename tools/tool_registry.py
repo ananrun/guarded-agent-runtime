@@ -11,12 +11,14 @@ from tools.expense_tools import ExpenseTools
 
 @dataclass(frozen=True)
 class ToolSpec:
+    # 工具注册表中的最小元数据：名称、函数、所需权限和参数 Schema。
     name: str
     func: Callable[..., Any]
     required_permission: str
     schema: dict[str, type]
 
     def validate_arguments(self, arguments: dict[str, Any]) -> str | None:
+        # 这里做轻量 Schema 校验，先覆盖 Demo 必需的缺参、类型和额外参数检查。
         for field, expected_type in self.schema.items():
             if field not in arguments:
                 return f"缺少参数 {field}"
@@ -30,6 +32,7 @@ class ToolSpec:
 
 class ToolRegistry:
     def __init__(self, tools: list[ToolSpec]) -> None:
+        # 注册表是 In-Guard 的唯一工具来源，未注册工具一律不能执行。
         self._tools = {tool.name: tool for tool in tools}
 
     def get(self, name: str) -> ToolSpec:
@@ -39,6 +42,7 @@ class ToolRegistry:
         return sorted(self._tools)
 
     def allowed_tool_names_for_permissions(self, permissions: UserPermissions) -> list[str]:
+        # Pre-Guard 用它把用户权限转换成当前上下文的工具白名单。
         return [
             tool.name
             for tool in self._tools.values()
@@ -47,6 +51,7 @@ class ToolRegistry:
 
 
 def build_expense_tool_registry(data_path: Path, rules: BusinessRules) -> ToolRegistry:
+    # 业务工具集中在这里注册；新增工具时必须声明 required_permission 和 schema。
     expense_tools = ExpenseTools(data_path=data_path, rules=rules)
     return ToolRegistry(
         [

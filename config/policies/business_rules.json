@@ -1,0 +1,6 @@
+{
+  "project_a_limit": "25000",
+  "excluded_from_project_a": ["meal", "insurance"],
+  "reject_duplicate_invoice": true,
+  "reject_missing_receipt": true
+}

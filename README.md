@@ -112,12 +112,18 @@ guarded-agent-runtime/
 ├── policies/
 │   ├── rules.py
 │   ├── permissions.py
-│   └── policy_loader.py
+│   ├── policy_loader.py
+│   └── guard_policies.py
 ├── runtime/
 │   ├── executor.py
 │   └── sandbox.py
 ├── config/
-│   └── expense_policy.json
+│   └── policies/
+│       ├── users.json
+│       ├── business_rules.json
+│       ├── pre_guard.json
+│       ├── in_guard.json
+│       └── post_guard.json
 ├── integrations/
 │   ├── qwenpaw_mcp_config.example.json
 │   └── qwenpaw_agent_instructions.md
@@ -181,10 +187,20 @@ python external_platform_demo.py
 规则文件在：
 
 ```text
-config/expense_policy.json
+config/policies/
 ```
 
-可以改用户权限、业务规则、工具权限和禁止动作。HTTP 模式下修改后调用：
+各文件职责：
+
+```text
+users.json           用户、角色、权限、用户别名
+business_rules.json  报销业务规则，例如项目限额、不可计入项目A的费用类型
+pre_guard.json       事前约束规则，例如任务关键词、注入给模型的约束说明
+in_guard.json        事中拦截规则，例如工具白名单、参数校验、权限校验、禁止动作
+post_guard.json      事后复核规则，例如必需工具依据、必需输出字段、越权承诺短语
+```
+
+HTTP 模式下修改后调用：
 
 ```text
 POST /policies/reload

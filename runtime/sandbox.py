@@ -13,5 +13,6 @@ class Sandbox:
     """
 
     def run(self, func: Callable[..., Any], arguments: dict[str, Any]) -> Any:
+        # 深拷贝入参，避免工具内部意外修改外部 Agent 传入的原始对象。
         safe_arguments = deepcopy(arguments)
         return func(**safe_arguments)

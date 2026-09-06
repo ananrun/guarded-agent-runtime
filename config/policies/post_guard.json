@@ -1,0 +1,20 @@
+{
+  "block_on_intercepted_tool_call": true,
+  "required_source_tools": [
+    "calculate_reimbursement",
+    "generate_audit_opinion"
+  ],
+  "required_output_fields": [
+    "project_a_reimbursable",
+    "other_channel_amount",
+    "not_allowed_in_project_a",
+    "exceptions",
+    "source_tools"
+  ],
+  "forbidden_output_phrases": [
+    "已提交付款",
+    "已付款",
+    "已修改预算",
+    "预算调整"
+  ]
+}

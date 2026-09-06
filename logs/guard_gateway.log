@@ -41,3 +41,7 @@
 2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=calculate_reimbursement allowed=True reason=None
 2026-09-04 23:48:48 INFO guard_gateway In-Guard tool_call session_id=4da47510-da3e-41f1-af50-25f97fba55c2 tool=generate_audit_opinion allowed=True reason=None
 2026-09-04 23:48:48 INFO guard_gateway Post-Guard output_review session_id=4da47510-da3e-41f1-af50-25f97fba55c2 attempt_no=1 passed=True reasons=[]
+2026-09-06 10:51:10 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-06 20:47:10 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-07 00:27:43 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json
+2026-09-07 00:48:51 INFO guard_gateway GuardGatewayService 已启动，policy_path=E:\.Aproject\desktop\Ontology\guarded-agent-runtime\config\expense_policy.json

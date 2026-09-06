@@ -268,19 +268,17 @@ GET  /audit/logs
 编辑：
 
 ```text
-config/expense_policy.json
+config/policies/
 ```
 
 可以改：
 
 ```text
-用户角色
-用户权限
-项目A限额
-不能计入项目A的费用类型
-禁止动作
-重复发票规则
-缺失票据规则
+users.json           用户角色、用户权限、用户别名
+business_rules.json  项目A限额、不能计入项目A的费用类型、重复发票规则、缺失票据规则
+pre_guard.json       任务关键词、注入给模型的约束说明
+in_guard.json        工具白名单校验、注册工具校验、用户权限校验、参数校验、禁止动作
+post_guard.json      必需工具依据、必需输出字段、越权承诺短语、是否因本轮拦截而复核失败
 ```
 
 MCP 模式重载：
