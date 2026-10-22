@@ -38,6 +38,12 @@ class ToolRegistry:
     def get(self, name: str) -> ToolSpec:
         return self._tools[name]
 
+    def register(self, tool: ToolSpec) -> None:
+        """注册业务工具；所有工具仍会经过 In-Guard 后才可执行。"""
+        if tool.name in self._tools:
+            raise ValueError(f"工具已注册：{tool.name}")
+        self._tools[tool.name] = tool
+
     def names(self) -> list[str]:
         return sorted(self._tools)
 

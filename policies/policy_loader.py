@@ -25,4 +25,5 @@ def load_policy_document(policy_dir: Path | None = None) -> dict[str, Any]:
         "pre_guard": load_json_config("pre_guard.json", policy_dir),
         "in_guard": load_json_config("in_guard.json", policy_dir),
         "post_guard": load_json_config("post_guard.json", policy_dir),
+        "jev": load_json_config("jev.json", policy_dir),
     }

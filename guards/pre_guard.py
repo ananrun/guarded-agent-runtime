@@ -23,6 +23,7 @@ class PreGuard:
         # 外部 Agent 收到这个 context 后，应该只围绕这些信息做规划。
         task_type = self._classify_task(user_request)
         allowed_tools = self.registry.allowed_tool_names_for_permissions(self.permissions)
+        is_expense_audit = task_type == "travel_expense_audit"
 
         return {
             "task_type": task_type,
@@ -32,12 +33,16 @@ class PreGuard:
                 "roles": self.permissions.roles,
                 "allowed_actions": sorted(self.permissions.allowed_actions),
             },
-            "business_rules": self.rules.to_dict(),
+            "business_rules": self.rules.to_dict() if is_expense_audit else {},
             "tool_policy": {
                 "allowed_tools": allowed_tools,
                 "forbidden_actions": sorted(self.in_policy.forbidden_actions),
             },
-            "model_instructions": self.pre_policy.model_instructions,
+            "model_instructions": (
+                self.pre_policy.model_instructions
+                if is_expense_audit
+                else self.pre_policy.general_model_instructions
+            ),
         }
 
     def _classify_task(self, user_request: str) -> str:

@@ -11,6 +11,7 @@ class PreGuardPolicy:
     # 事前规则：任务识别关键词，以及注入给外部 Agent 的模型约束。
     task_keywords: dict[str, list[str]]
     model_instructions: list[str]
+    general_model_instructions: list[str]
 
 
 @dataclass(frozen=True)
@@ -32,12 +33,34 @@ class PostGuardPolicy:
     forbidden_output_phrases: list[str]
 
 
+@dataclass(frozen=True)
+class JevGuardPolicy:
+    # JEV 是可选的语义风险层，只做风险评分和转人工建议，不替代硬规则。
+    enabled: bool
+    provider: str
+    tool_call_gate_enabled: bool
+    output_review_enabled: bool
+    human_review_risk_threshold: float
+    deny_risk_threshold: float
+    risky_tool_names: list[str]
+    risky_argument_phrases: list[str]
+    risky_output_phrases: list[str]
+    base_url: str
+    model: str
+    timeout_seconds: float
+    failure_mode: str
+
+
 def load_pre_guard_policy(policy_dir: Path | None = None) -> PreGuardPolicy:
     # 从独立 JSON 加载，业务方修改配置后可通过 guarded_policy_reload 生效。
     data = load_json_config("pre_guard.json", policy_dir)
     return PreGuardPolicy(
         task_keywords=data["task_keywords"],
         model_instructions=data["model_instructions"],
+        general_model_instructions=data.get(
+            "general_model_instructions",
+            ["只能调用工具白名单中的工具。", "不得编造工具没有返回的数据。"],
+        ),
     )
 
 
@@ -61,4 +84,24 @@ def load_post_guard_policy(policy_dir: Path | None = None) -> PostGuardPolicy:
         required_source_tools=data["required_source_tools"],
         required_output_fields=data["required_output_fields"],
         forbidden_output_phrases=data["forbidden_output_phrases"],
+    )
+
+
+def load_jev_guard_policy(policy_dir: Path | None = None) -> JevGuardPolicy:
+    # jev.json 可以关闭；关闭后系统退回纯确定性三阶段约束。
+    data = load_json_config("jev.json", policy_dir)
+    return JevGuardPolicy(
+        enabled=bool(data["enabled"]),
+        provider=data["provider"],
+        tool_call_gate_enabled=bool(data["tool_call_gate"]["enabled"]),
+        output_review_enabled=bool(data["output_review"]["enabled"]),
+        human_review_risk_threshold=float(data["human_review_risk_threshold"]),
+        deny_risk_threshold=float(data["deny_risk_threshold"]),
+        risky_tool_names=data["risky_tool_names"],
+        risky_argument_phrases=data["risky_argument_phrases"],
+        risky_output_phrases=data["risky_output_phrases"],
+        base_url=data.get("base_url", "http://127.0.0.1:8017"),
+        model=data.get("model", "jev-latest"),
+        timeout_seconds=float(data.get("timeout_seconds", 3.0)),
+        failure_mode=data.get("failure_mode", "deny"),
     )

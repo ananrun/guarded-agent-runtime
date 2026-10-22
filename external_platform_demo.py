@@ -20,6 +20,15 @@ def main() -> None:
     )
     session_id = context_response["session_id"]
     blocked = service.call_tool(session_id, "approve_payment", {"expense_id": "EXP-2026-001"})
+    jev_blocked = service.call_tool(
+        session_id,
+        "generate_audit_opinion",
+        {
+            "expense_id": "EXP-2026-001",
+            "calculation": {},
+            "include_payment_commitment": True,
+        },
+    )
     unsafe_review = service.review_output(
         session_id,
         {
@@ -41,6 +50,7 @@ def main() -> None:
                 "manual_violation": {
                     "context_build": context_response,
                     "blocked_tool_call": blocked,
+                    "jev_blocked_tool_call": jev_blocked,
                     "review_output": unsafe_review,
                 },
             },

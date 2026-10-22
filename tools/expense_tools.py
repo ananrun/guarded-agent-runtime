@@ -22,26 +22,26 @@ class ExpenseTools:
 
     def list_expense_forms(self) -> dict[str, Any]:
         # QwenPaw 这类外部平台可能不知道 expense_id，先给它一个受控列表入口。
-        data = self._load()
+        forms = self._load_forms()
         return {
             "items": [
                 {
-                    "expense_id": data["expense_id"],
-                    "applicant": data["applicant"],
-                    "project": data["project"],
-                    "currency": data["currency"],
-                    "item_count": len(data["items"]),
-                    "note": "Demo 环境只有这一张示例报销单。",
+                    "expense_id": form["expense_id"],
+                    "applicant": form["applicant"],
+                    "project": form["project"],
+                    "currency": form["currency"],
+                    "item_count": len(form["items"]),
                 }
+                for form in forms
             ]
         }
 
     def read_expense_form(self, expense_id: str) -> dict[str, Any]:
         # 这里只读取示例数据；真实系统可替换成数据库或报销系统 API。
-        data = self._load()
-        if data["expense_id"] != expense_id:
-            raise ValueError(f"报销单 {expense_id} 不存在")
-        return data
+        for form in self._load_forms():
+            if form["expense_id"] == expense_id:
+                return form
+        raise ValueError(f"报销单 {expense_id} 不存在")
 
     def check_invoice(self, expense_id: str) -> dict[str, Any]:
         # 发票核验结果作为后续计算和复核的真实依据。
@@ -129,7 +129,9 @@ class ExpenseTools:
             ),
         }
 
-    def _load(self) -> dict[str, Any]:
+    def _load_forms(self) -> list[dict[str, Any]]:
         # Demo 数据每次从文件读取，便于你直接修改 data/sample_expense.json 做测试。
         with self.data_path.open("r", encoding="utf-8") as fh:
-            return json.load(fh)
+            data = json.load(fh)
+        # 兼容旧的单报销单文件，方便替换真实数据源时平滑迁移。
+        return data.get("forms", [data])

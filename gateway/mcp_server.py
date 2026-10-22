@@ -16,9 +16,8 @@ service = GuardGatewayService(base_dir=BASE_DIR)
 mcp = FastMCP(
     "guarded-agent-runtime",
     instructions=(
-        "这是 Guard Gateway 的 MCP 接入层。外部 Agent 必须先调用 "
-        "guarded_context_build 获取 session_id，再携带 session_id 调用受控业务工具，"
-        "最终答案必须调用 guarded_output_review 复核。"
+        "这是通用 Guard Gateway。先调用 guarded_context_build 获取 session_id；"
+        "所有业务工具必须通过 guarded_tool_call；最终回复必须调用 guarded_output_review。"
     ),
 )
 
@@ -60,73 +59,6 @@ def guarded_tool_call(
         session_id=session_id,
         tool_name=tool_name,
         arguments=arguments,
-    )
-
-
-@mcp.tool()
-def guard_list_expense_forms(session_id: str) -> dict[str, Any]:
-    """受控列出可审核的 Demo 报销单。"""
-
-    return service.call_tool(
-        session_id=session_id,
-        tool_name="list_expense_forms",
-        arguments={},
-    )
-
-
-@mcp.tool()
-def guard_read_expense_form(session_id: str, expense_id: str) -> dict[str, Any]:
-    """受控读取报销单。"""
-
-    return service.call_tool(
-        session_id=session_id,
-        tool_name="read_expense_form",
-        arguments={"expense_id": expense_id},
-    )
-
-
-@mcp.tool()
-def guard_check_invoice(session_id: str, expense_id: str) -> dict[str, Any]:
-    """受控核验发票。"""
-
-    return service.call_tool(
-        session_id=session_id,
-        tool_name="check_invoice",
-        arguments={"expense_id": expense_id},
-    )
-
-
-@mcp.tool()
-def guard_calculate_reimbursement(
-    session_id: str, expense_id: str, project: str
-) -> dict[str, Any]:
-    """受控计算报销金额。"""
-
-    return service.call_tool(
-        session_id=session_id,
-        tool_name="calculate_reimbursement",
-        arguments={"expense_id": expense_id, "project": project},
-    )
-
-
-@mcp.tool()
-def guard_generate_audit_opinion(
-    session_id: str,
-    expense_id: str,
-    calculation: dict[str, Any],
-    include_payment_commitment: bool = False,
-) -> dict[str, Any]:
-    """受控生成审核意见。"""
-
-    # include_payment_commitment=True 会在工具层被拒绝，用来演示越权承诺拦截。
-    return service.call_tool(
-        session_id=session_id,
-        tool_name="generate_audit_opinion",
-        arguments={
-            "expense_id": expense_id,
-            "calculation": calculation,
-            "include_payment_commitment": include_payment_commitment,
-        },
     )
 
 

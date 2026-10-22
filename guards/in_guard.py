@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from guards.jev_guard import JevGuard
 from policies.permissions import UserPermissions
 from policies.guard_policies import InGuardPolicy
 from policies.rules import BusinessRules
@@ -18,6 +19,7 @@ class InGuard:
     permissions: UserPermissions
     registry: ToolRegistry
     policy: InGuardPolicy
+    jev_guard: JevGuard | None = None
     sandbox: Sandbox = field(default_factory=Sandbox)
     call_log: list[dict[str, Any]] = field(default_factory=list)
 
@@ -33,6 +35,26 @@ class InGuard:
             )
             self._log(call, result)
             return result
+
+        if self.jev_guard is not None:
+            # JEV 在硬校验通过后、真实工具执行前介入；它负责语义风险，不负责权限判断。
+            jev_decision = self.jev_guard.review_tool_call(call)
+            if not jev_decision.allowed:
+                result = ToolResult(
+                    tool=call.name,
+                    allowed=False,
+                    result={
+                        "jev_decision": {
+                            "action": jev_decision.action,
+                            "risk_score": jev_decision.risk_score,
+                            "confidence": jev_decision.confidence,
+                            "source": jev_decision.source,
+                        }
+                    },
+                    reason=f"JEV 语义风险拦截：{jev_decision.reason}",
+                )
+                self._log(call, result)
+                return result
 
         tool = self.registry.get(call.name)
         try:
@@ -84,5 +106,6 @@ class InGuard:
                 "arguments": call.arguments,
                 "allowed": result.allowed,
                 "reason": result.reason,
+                "result": result.result if not result.allowed else None,
             }
         )

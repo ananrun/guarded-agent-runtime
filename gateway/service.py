@@ -6,10 +6,12 @@ from typing import Any
 from uuid import uuid4
 
 from guards.in_guard import InGuard
+from guards.jev_guard import JevGuard
 from guards.post_guard import PostGuard
 from guards.pre_guard import PreGuard
 from gateway.logging_config import append_jsonl, setup_file_logger
 from policies.guard_policies import (
+    load_jev_guard_policy,
     load_in_guard_policy,
     load_post_guard_policy,
     load_pre_guard_policy,
@@ -17,7 +19,7 @@ from policies.guard_policies import (
 from policies.permissions import load_user_permissions
 from policies.rules import load_business_rules
 from runtime.executor import ToolCall
-from tools.tool_registry import build_expense_tool_registry
+from tools.tool_registry import ToolSpec, build_expense_tool_registry
 
 
 @dataclass
@@ -47,7 +49,10 @@ class GuardGatewayService:
         self.pre_guard_policy = load_pre_guard_policy(self.policy_dir)
         self.in_guard_policy = load_in_guard_policy(self.policy_dir)
         self.post_guard_policy = load_post_guard_policy(self.policy_dir)
+        self.jev_guard_policy = load_jev_guard_policy(self.policy_dir)
+        self.jev_guard = JevGuard(self.jev_guard_policy)
         self.registry = build_expense_tool_registry(data_path=self.data_path, rules=self.rules)
+        self.custom_tool_specs: list[ToolSpec] = []
         self.sessions: dict[str, GuardSession] = {}
         self.in_guards: dict[str, InGuard] = {}
         self.logger = setup_file_logger(self.base_dir)
@@ -62,6 +67,7 @@ class GuardGatewayService:
             permissions=permissions,
             registry=self.registry,
             policy=self.in_guard_policy,
+            jev_guard=self.jev_guard,
         )
         pre_guard = PreGuard(
             rules=self.rules,
@@ -71,6 +77,11 @@ class GuardGatewayService:
             in_policy=self.in_guard_policy,
         )
         context = pre_guard.build_context(user_request)
+        context["semantic_guard"] = {
+            "enabled": self.jev_guard_policy.enabled,
+            "provider": self.jev_guard_policy.provider,
+            "note": "JEV 只做语义风险评分和转人工建议；权限、白名单、Schema 仍由 In-Guard 硬拦截。",
+        }
         session_id = str(uuid4())
 
         self.sessions[session_id] = GuardSession(
@@ -95,6 +106,7 @@ class GuardGatewayService:
                 "user_id": user_id,
                 "allowed_tools": context["tool_policy"]["allowed_tools"],
                 "forbidden_actions": context["tool_policy"]["forbidden_actions"],
+                "jev_enabled": self.jev_guard_policy.enabled,
             },
         )
 
@@ -104,6 +116,11 @@ class GuardGatewayService:
             # 对 QwenPaw / DeerFlow 这类外部平台来说，重点是保存 session_id。
             "integration_note": "外部平台后续业务工具调用必须携带 session_id 走 /tools/call。",
         }
+
+    def register_tool(self, tool: ToolSpec) -> None:
+        """注册其他业务域工具，使其可经 guarded_tool_call 受控调用。"""
+        self.registry.register(tool)
+        self.custom_tool_specs.append(tool)
 
     def audit_expense(
         self,
@@ -130,6 +147,13 @@ class GuardGatewayService:
             "check_invoice",
             {"expense_id": selected_expense_id},
         )
+        if not invoice_result["allowed"] or not invoice_result["result"]["passed"]:
+            return self._blocked_auto_audit(
+                session_id=session_id,
+                context_response=context_response,
+                tool_results=[listed, read_result, invoice_result],
+                reason=self._invoice_failure_reason(invoice_result),
+            )
         calculation_result = self.call_tool(
             session_id,
             "calculate_reimbursement",
@@ -286,20 +310,35 @@ class GuardGatewayService:
             observations=session.observations,
             # 只把当前轮次的工具调用日志交给复核器，支持 Agent Loop 多轮重试。
             call_log=in_guard.call_log[session.attempt_call_log_start :],
+            strict_business_review=(
+                session.context.get("task_type") == "travel_expense_audit"
+            ),
         )
+        jev_decision = self.jev_guard.review_output(final_answer)
+        reasons = list(review.reasons)
+        if not jev_decision.allowed:
+            reasons.append(f"JEV 输出语义风险：{jev_decision.reason}")
+        passed = review.passed and jev_decision.allowed
         response = {
             "attempt_no": session.attempt_no,
-            "passed": review.passed,
-            "reasons": review.reasons,
-            "action": "allow_output" if review.passed else "retry_or_human_confirm",
-            "message": "复核通过，可以输出给用户。" if review.passed else "复核失败，请按原因重试或转人工。",
+            "passed": passed,
+            "reasons": reasons,
+            "jev_decision": {
+                "action": jev_decision.action,
+                "risk_score": jev_decision.risk_score,
+                "confidence": jev_decision.confidence,
+                "reason": jev_decision.reason,
+                "source": jev_decision.source,
+            },
+            "action": "allow_output" if passed else "retry_or_human_confirm",
+            "message": "复核通过，可以输出给用户。" if passed else "复核失败，请按原因重试或转人工。",
         }
         self.logger.info(
             "Post-Guard output_review session_id=%s attempt_no=%s passed=%s reasons=%s",
             session_id,
             session.attempt_no,
-            review.passed,
-            review.reasons,
+            passed,
+            reasons,
         )
         append_jsonl(
             self.base_dir,
@@ -308,8 +347,10 @@ class GuardGatewayService:
                 "event": "output_review",
                 "session_id": session_id,
                 "attempt_no": session.attempt_no,
-                "passed": review.passed,
-                "reasons": review.reasons,
+                "passed": passed,
+                "reasons": reasons,
+                "jev_action": jev_decision.action,
+                "jev_risk_score": jev_decision.risk_score,
             },
         )
         return response
@@ -333,7 +374,11 @@ class GuardGatewayService:
         self.pre_guard_policy = load_pre_guard_policy(self.policy_dir)
         self.in_guard_policy = load_in_guard_policy(self.policy_dir)
         self.post_guard_policy = load_post_guard_policy(self.policy_dir)
+        self.jev_guard_policy = load_jev_guard_policy(self.policy_dir)
+        self.jev_guard = JevGuard(self.jev_guard_policy)
         self.registry = build_expense_tool_registry(data_path=self.data_path, rules=self.rules)
+        for tool in self.custom_tool_specs:
+            self.registry.register(tool)
         self.sessions.clear()
         self.in_guards.clear()
         self.logger.info("策略已重新加载，policy_dir=%s", self.policy_dir)
@@ -387,3 +432,15 @@ class GuardGatewayService:
             },
             "final_answer": None,
         }
+
+    @staticmethod
+    def _invoice_failure_reason(invoice_result: dict[str, Any]) -> str:
+        if not invoice_result["allowed"]:
+            return invoice_result["reason"] or "发票核验工具被拦截。"
+        result = invoice_result["result"]
+        reasons: list[str] = []
+        if result.get("duplicate_items"):
+            reasons.append(f"重复发票：{', '.join(result['duplicate_items'])}")
+        if result.get("missing_receipt_items"):
+            reasons.append(f"缺失票据：{', '.join(result['missing_receipt_items'])}")
+        return "；".join(reasons) or "发票核验未通过。"
