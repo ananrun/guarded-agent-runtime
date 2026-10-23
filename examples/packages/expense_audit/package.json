@@ -1,0 +1,8 @@
+{
+  "name": "expense_audit",
+  "task_type": "travel_expense_audit",
+  "keywords": ["报销", "差旅", "费用审核", "审核报销"],
+  "files": {"workflow": "workflow.json", "tools": "tools.json", "data": "data.json", "demo": "demo.json"},
+  "rules": {"project_a_limit": "25000", "excluded_from_project_a": ["meal", "insurance"], "reject_duplicate_invoice": true, "reject_missing_receipt": true},
+  "model_instructions": ["只能调用工具白名单中的工具。", "不得编造工具没有返回的数据。", "不得输出付款、预算修改、票据修改等越权承诺。"]
+}

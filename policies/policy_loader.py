@@ -7,7 +7,7 @@ from typing import Any
 
 def default_policy_dir() -> Path:
     # 默认策略目录，所有三阶段规则都从这里读取。
-    return Path(__file__).resolve().parent.parent / "config" / "policies"
+    return Path(__file__).resolve().parent.parent / "config"
 
 
 def load_json_config(name: str, policy_dir: Path | None = None) -> dict[str, Any]:
@@ -21,7 +21,6 @@ def load_policy_document(policy_dir: Path | None = None) -> dict[str, Any]:
     # 调试或管理界面需要一次性查看全部策略时使用。
     return {
         "users": load_json_config("users.json", policy_dir),
-        "business_rules": load_json_config("business_rules.json", policy_dir),
         "pre_guard": load_json_config("pre_guard.json", policy_dir),
         "in_guard": load_json_config("in_guard.json", policy_dir),
         "post_guard": load_json_config("post_guard.json", policy_dir),

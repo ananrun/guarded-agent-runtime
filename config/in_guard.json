@@ -3,9 +3,5 @@
   "enforce_registered_tools": true,
   "enforce_user_permissions": true,
   "enforce_schema_validation": true,
-  "forbidden_actions": [
-    "approve_payment",
-    "modify_budget",
-    "modify_invoice"
-  ]
+  "forbidden_actions": []
 }

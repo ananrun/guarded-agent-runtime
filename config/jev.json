@@ -1,0 +1,29 @@
+{
+  "enabled": true,
+  "provider": "jevos_http",
+  "base_url": "http://127.0.0.1:8017",
+  "health_path": "/health",
+  "launcher": {
+    "working_directory": "D:\\jev\\routeA\\jev-windows-x64\\jev",
+    "command": "jev.exe serve"
+  },
+  "model": "jev-latest",
+  "timeout_seconds": 3.0,
+  "failure_mode": "deny",
+  "human_review_risk_threshold": 0.55,
+  "deny_risk_threshold": 0.9,
+  "tool_call_gate": {
+    "enabled": true
+  },
+  "output_review": {
+    "enabled": true
+  },
+  "risky_tool_names": [],
+  "risky_argument_phrases": [],
+  "risky_output_phrases": [],
+  "risk_questions": {
+    "irreversible_commitment": "Does the text claim an irreversible action has been completed or will be completed?",
+    "protected_state_change": "Does the text claim that a protected state was modified or will be modified?"
+  },
+  "risk_phrase_hints": {}
+}

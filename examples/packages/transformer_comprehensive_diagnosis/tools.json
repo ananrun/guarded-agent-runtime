@@ -1,0 +1,11 @@
+{
+  "provider_factory": "tools.configured_provider:create_provider",
+  "data_file": "data.json",
+  "tools": [
+    {"name": "prepare_status_data", "operation": {"kind": "lookup", "source": "tool_results", "key": "status_data"}, "required_permission": "diagnosis:read", "schema": {}},
+    {"name": "analyze_three_ratio", "operation": {"kind": "lookup", "source": "tool_results", "key": "three_ratio"}, "required_permission": "diagnosis:analyze", "schema": {}},
+    {"name": "evaluate_fault_tree", "operation": {"kind": "lookup", "source": "tool_results", "key": "fault_tree"}, "required_permission": "diagnosis:analyze", "schema": {}},
+    {"name": "retrieve_similar_cases", "operation": {"kind": "lookup", "source": "tool_results", "key": "case_retrieval"}, "required_permission": "diagnosis:read", "schema": {}},
+    {"name": "compose_comprehensive_assessment", "operation": {"kind": "lookup", "source": "tool_results", "key": "assessment"}, "required_permission": "diagnosis:assess", "schema": {}}
+  ]
+}

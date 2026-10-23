@@ -1,0 +1,8 @@
+{
+  "name": "transformer_comprehensive_diagnosis",
+  "task_type": "transformer_comprehensive_diagnosis",
+  "keywords": ["变压器", "油色谱", "三比值", "故障树", "综合研判", "相似案例"],
+  "files": {"workflow": "workflow.json", "tools": "tools.json", "data": "data.json", "domain_model": "domain_model.json", "demo": "demo.json"},
+  "rules": {"domain_model": "domain_model.json", "required_activities": ["状态数据准备", "油色谱诊断分析", "故障树诊断分析", "相似案例检索"]},
+  "model_instructions": ["只能基于状态数据、油色谱、故障树和相似案例证据输出研判结论。", "证据不足或结论冲突时必须转人工复核。", "不得执行设备操作或宣称已自动处置。"]
+}

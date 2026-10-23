@@ -8,9 +8,7 @@ from policies.policy_loader import load_json_config
 
 @dataclass(frozen=True)
 class PreGuardPolicy:
-    # 事前规则：任务识别关键词，以及注入给外部 Agent 的模型约束。
-    task_keywords: dict[str, list[str]]
-    model_instructions: list[str]
+    # 事前规则：注入给外部 Agent 的通用约束。
     general_model_instructions: list[str]
 
 
@@ -45,6 +43,8 @@ class JevGuardPolicy:
     risky_tool_names: list[str]
     risky_argument_phrases: list[str]
     risky_output_phrases: list[str]
+    risk_questions: dict[str, str]
+    risk_phrase_hints: dict[str, str]
     base_url: str
     model: str
     timeout_seconds: float
@@ -55,8 +55,6 @@ def load_pre_guard_policy(policy_dir: Path | None = None) -> PreGuardPolicy:
     # 从独立 JSON 加载，业务方修改配置后可通过 guarded_policy_reload 生效。
     data = load_json_config("pre_guard.json", policy_dir)
     return PreGuardPolicy(
-        task_keywords=data["task_keywords"],
-        model_instructions=data["model_instructions"],
         general_model_instructions=data.get(
             "general_model_instructions",
             ["只能调用工具白名单中的工具。", "不得编造工具没有返回的数据。"],
@@ -100,6 +98,8 @@ def load_jev_guard_policy(policy_dir: Path | None = None) -> JevGuardPolicy:
         risky_tool_names=data["risky_tool_names"],
         risky_argument_phrases=data["risky_argument_phrases"],
         risky_output_phrases=data["risky_output_phrases"],
+        risk_questions=data.get("risk_questions", {}),
+        risk_phrase_hints=data.get("risk_phrase_hints", {}),
         base_url=data.get("base_url", "http://127.0.0.1:8017"),
         model=data.get("model", "jev-latest"),
         timeout_seconds=float(data.get("timeout_seconds", 3.0)),

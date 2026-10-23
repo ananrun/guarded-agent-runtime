@@ -6,16 +6,14 @@ from typing import Any
 from guards.jev_guard import JevGuard
 from policies.permissions import UserPermissions
 from policies.guard_policies import InGuardPolicy
-from policies.rules import BusinessRules
-from runtime.executor import ToolCall, ToolResult
-from runtime.sandbox import Sandbox
+from tools.executor import ToolCall, ToolResult
+from tools.sandbox import Sandbox
 from tools.tool_registry import ToolRegistry
 
 
 @dataclass
 class InGuard:
     # In-Guard 是代码级硬拦截层，不相信外部 Agent 自己判断是否合规。
-    rules: BusinessRules
     permissions: UserPermissions
     registry: ToolRegistry
     policy: InGuardPolicy
@@ -88,6 +86,7 @@ class InGuard:
         if (
             self.policy.enforce_user_permissions
             and tool.required_permission not in self.permissions.allowed_actions
+            and "*" not in self.permissions.allowed_actions
         ):
             return f"拦截原因：当前用户缺少权限 {tool.required_permission}。"
 

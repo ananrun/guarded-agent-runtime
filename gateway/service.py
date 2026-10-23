@@ -9,6 +9,8 @@ from guards.in_guard import InGuard
 from guards.jev_guard import JevGuard
 from guards.post_guard import PostGuard
 from guards.pre_guard import PreGuard
+from framework.workflows import WorkflowEngine
+from framework.packages import PackageCatalog
 from gateway.logging_config import append_jsonl, setup_file_logger
 from policies.guard_policies import (
     load_jev_guard_policy,
@@ -17,9 +19,8 @@ from policies.guard_policies import (
     load_pre_guard_policy,
 )
 from policies.permissions import load_user_permissions
-from policies.rules import load_business_rules
-from runtime.executor import ToolCall
-from tools.tool_registry import ToolSpec, build_expense_tool_registry
+from tools.executor import ToolCall
+from tools.tool_registry import ToolSpec, build_tool_registry
 
 
 @dataclass
@@ -40,18 +41,29 @@ class GuardSession:
 class GuardGatewayService:
     """外部 Agent 平台接入时使用的三阶段网关服务。"""
 
-    def __init__(self, base_dir: Path | None = None, policy_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        base_dir: Path | None = None,
+        policy_dir: Path | None = None,
+        package_dir: Path | None = None,
+    ) -> None:
         self.base_dir = base_dir or Path(__file__).resolve().parent.parent
-        # 所有可变规则都集中放在 config/policies，方便业务方直接改 JSON。
-        self.policy_dir = policy_dir or self.base_dir / "config" / "policies"
-        self.data_path = self.base_dir / "data" / "sample_expense.json"
-        self.rules = load_business_rules(self.policy_dir)
+        # 所有可变框架规则都集中放在 config，方便直接修改 JSON。
+        self.policy_dir = policy_dir or self.base_dir / "config"
+        self.package_dir = package_dir or self.base_dir / "packages"
+        self.workflow_dir = self.package_dir
+        self.tool_config_dir = self.package_dir
         self.pre_guard_policy = load_pre_guard_policy(self.policy_dir)
         self.in_guard_policy = load_in_guard_policy(self.policy_dir)
         self.post_guard_policy = load_post_guard_policy(self.policy_dir)
         self.jev_guard_policy = load_jev_guard_policy(self.policy_dir)
         self.jev_guard = JevGuard(self.jev_guard_policy)
-        self.registry = build_expense_tool_registry(data_path=self.data_path, rules=self.rules)
+        self.registry = build_tool_registry(
+            tool_config_dir=self.tool_config_dir,
+            runtime_context={"base_dir": self.base_dir},
+        )
+        self.workflow_engine = WorkflowEngine(self.workflow_dir)
+        self.package_catalog = PackageCatalog(self.workflow_dir)
         self.custom_tool_specs: list[ToolSpec] = []
         self.sessions: dict[str, GuardSession] = {}
         self.in_guards: dict[str, InGuard] = {}
@@ -63,18 +75,17 @@ class GuardGatewayService:
         permissions = load_user_permissions(user_id=user_id, policy_dir=self.policy_dir)
         user_id = permissions.user_id
         in_guard = InGuard(
-            rules=self.rules,
             permissions=permissions,
             registry=self.registry,
             policy=self.in_guard_policy,
             jev_guard=self.jev_guard,
         )
         pre_guard = PreGuard(
-            rules=self.rules,
             permissions=permissions,
             registry=self.registry,
             pre_policy=self.pre_guard_policy,
             in_policy=self.in_guard_policy,
+            packages=self.package_catalog,
         )
         context = pre_guard.build_context(user_request)
         context["semantic_guard"] = {
@@ -122,112 +133,40 @@ class GuardGatewayService:
         self.registry.register(tool)
         self.custom_tool_specs.append(tool)
 
-    def audit_expense(
+    def run_workflow(
         self,
+        workflow_name: str,
         user_request: str,
-        user_id: str = "auditor_001",
-        expense_id: str | None = None,
-        project: str = "project_a",
+        user_id: str = "default",
+        inputs: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        # 一体化入口：外部 Agent 不想自己编排多步流程时，直接调用这个工具即可。
-        # 内部仍然完整经过 Pre-Guard -> In-Guard -> Tool -> Post-Guard。
+        """执行配置文件声明的受控工作流，是所有业务场景的通用入口。"""
+        workflow = self.workflow_engine.load(workflow_name)
         context_response = self.build_context(user_id=user_id, user_request=user_request)
         session_id = context_response["session_id"]
-
-        # Demo 默认选择第一张报销单；真实系统可把 expense_id 从用户输入或业务系统中传进来。
-        listed = self.call_tool(session_id, "list_expense_forms", {})
-        selected_expense_id = expense_id or self._select_first_expense_id(listed)
-        read_result = self.call_tool(
-            session_id,
-            "read_expense_form",
-            {"expense_id": selected_expense_id},
+        session = self.sessions[session_id]
+        session.context["task_type"] = workflow.task_type
+        run = self.workflow_engine.run(
+            workflow,
+            inputs or {},
+            lambda tool_name, arguments: self.call_tool(session_id, tool_name, arguments),
         )
-        invoice_result = self.call_tool(
-            session_id,
-            "check_invoice",
-            {"expense_id": selected_expense_id},
-        )
-        if not invoice_result["allowed"] or not invoice_result["result"]["passed"]:
-            return self._blocked_auto_audit(
+        if run["blocked"]:
+            return self._blocked_workflow(
                 session_id=session_id,
                 context_response=context_response,
-                tool_results=[listed, read_result, invoice_result],
-                reason=self._invoice_failure_reason(invoice_result),
+                tool_results=run["tool_results"],
+                reason=run["reason"],
             )
-        calculation_result = self.call_tool(
-            session_id,
-            "calculate_reimbursement",
-            {"expense_id": selected_expense_id, "project": project},
-        )
-
-        if not calculation_result["allowed"]:
-            # 工具调用被事中拦截时，不再生成看似成功的审核结论。
-            return self._blocked_auto_audit(
-                session_id=session_id,
-                context_response=context_response,
-                tool_results=[listed, read_result, invoice_result, calculation_result],
-                reason=calculation_result["reason"],
-            )
-
-        opinion_result = self.call_tool(
-            session_id,
-            "generate_audit_opinion",
-            {
-                "expense_id": selected_expense_id,
-                "calculation": calculation_result["result"],
-                "include_payment_commitment": False,
-            },
-        )
-
-        if not opinion_result["allowed"]:
-            # 比如 Agent/调用方要求生成“已付款”承诺，这里会被硬拦截。
-            return self._blocked_auto_audit(
-                session_id=session_id,
-                context_response=context_response,
-                tool_results=[
-                    listed,
-                    read_result,
-                    invoice_result,
-                    calculation_result,
-                    opinion_result,
-                ],
-                reason=opinion_result["reason"],
-            )
-
-        calculation = calculation_result["result"]
-        # 最终输出必须携带 source_tools，Post-Guard 会检查它是否真的来自工具结果。
-        final_answer = {
-            "status": "passed",
-            "message": opinion_result["result"]["opinion"],
-            "project_a_reimbursable": calculation["project_a_reimbursable"],
-            "other_channel_amount": calculation["other_channel_amount"],
-            "not_allowed_in_project_a": calculation["not_allowed_in_project_a"],
-            "exceptions": calculation["exceptions"],
-            "source_tools": [
-                "list_expense_forms",
-                "read_expense_form",
-                "check_invoice",
-                "calculate_reimbursement",
-                "generate_audit_opinion",
-            ],
-            "forbidden_commitments": [],
-        }
-        review = self.review_output(session_id=session_id, final_answer=final_answer)
-
+        review = self.review_output(session_id=session_id, final_answer=run["final_answer"])
         return {
             "status": "success" if review["passed"] else "review_failed",
             "session_id": session_id,
             "context": context_response["context"],
-            "selected_expense_id": selected_expense_id,
-            "tool_results": [
-                listed,
-                read_result,
-                invoice_result,
-                calculation_result,
-                opinion_result,
-            ],
+            "workflow": workflow_name,
+            "tool_results": run["tool_results"],
             "review": review,
-            "final_answer": final_answer if review["passed"] else None,
+            "final_answer": run["final_answer"] if review["passed"] else None,
         }
 
     def call_tool(
@@ -245,6 +184,11 @@ class GuardGatewayService:
             "allowed": result.allowed,
             "result": result.result,
             "reason": result.reason,
+            "next_action": (
+                "调用 guarded_attempt_start 开启新一轮，再按 tool_schemas 重试。"
+                if not result.allowed
+                else None
+            ),
         }
         session.observations.append(observation)
         # 日志分两类：普通 log 方便看运行状态，audit.jsonl 方便机器审计和追踪。
@@ -300,7 +244,6 @@ class GuardGatewayService:
         session = self._get_session(session_id)
         permissions = load_user_permissions(user_id=session.user_id, policy_dir=self.policy_dir)
         post_guard = PostGuard(
-            rules=self.rules,
             permissions=permissions,
             policy=self.post_guard_policy,
         )
@@ -310,9 +253,6 @@ class GuardGatewayService:
             observations=session.observations,
             # 只把当前轮次的工具调用日志交给复核器，支持 Agent Loop 多轮重试。
             call_log=in_guard.call_log[session.attempt_call_log_start :],
-            strict_business_review=(
-                session.context.get("task_type") == "travel_expense_audit"
-            ),
         )
         jev_decision = self.jev_guard.review_output(final_answer)
         reasons = list(review.reasons)
@@ -370,13 +310,16 @@ class GuardGatewayService:
     def reload_policy(self) -> dict[str, Any]:
         # 策略热重载：业务规则改完 JSON 后调用它即可生效。
         # 为避免旧上下文继续使用旧规则，重载后清空已有 session。
-        self.rules = load_business_rules(self.policy_dir)
         self.pre_guard_policy = load_pre_guard_policy(self.policy_dir)
         self.in_guard_policy = load_in_guard_policy(self.policy_dir)
         self.post_guard_policy = load_post_guard_policy(self.policy_dir)
         self.jev_guard_policy = load_jev_guard_policy(self.policy_dir)
         self.jev_guard = JevGuard(self.jev_guard_policy)
-        self.registry = build_expense_tool_registry(data_path=self.data_path, rules=self.rules)
+        self.registry = build_tool_registry(
+            tool_config_dir=self.tool_config_dir,
+            runtime_context={"base_dir": self.base_dir},
+        )
+        self.package_catalog = PackageCatalog(self.workflow_dir)
         for tool in self.custom_tool_specs:
             self.registry.register(tool)
         self.sessions.clear()
@@ -403,23 +346,13 @@ class GuardGatewayService:
         return session
 
     @staticmethod
-    def _select_first_expense_id(list_result: dict[str, Any]) -> str:
-        # Demo 简化：没有指定报销单时选择列表第一项。
-        if not list_result["allowed"]:
-            raise ValueError(f"无法列出报销单：{list_result['reason']}")
-        items = list_result["result"].get("items", [])
-        if not items:
-            raise ValueError("没有可审核的报销单。")
-        return items[0]["expense_id"]
-
-    @staticmethod
-    def _blocked_auto_audit(
+    def _blocked_workflow(
         session_id: str,
         context_response: dict[str, Any],
         tool_results: list[dict[str, Any]],
         reason: str | None,
     ) -> dict[str, Any]:
-        # 统一返回“自动审核被阻断”的结构，调用方可以据此转人工或重新授权。
+        # 统一返回“工作流被阻断”的结构，调用方可以据此转人工或重新授权。
         return {
             "status": "blocked",
             "session_id": session_id,
@@ -427,20 +360,8 @@ class GuardGatewayService:
             "tool_results": tool_results,
             "review": {
                 "passed": False,
-                "reasons": [reason or "自动审核被工具拦截。"],
+                "reasons": [reason or "工作流被工具拦截。"],
                 "action": "human_confirm",
             },
             "final_answer": None,
         }
-
-    @staticmethod
-    def _invoice_failure_reason(invoice_result: dict[str, Any]) -> str:
-        if not invoice_result["allowed"]:
-            return invoice_result["reason"] or "发票核验工具被拦截。"
-        result = invoice_result["result"]
-        reasons: list[str] = []
-        if result.get("duplicate_items"):
-            reasons.append(f"重复发票：{', '.join(result['duplicate_items'])}")
-        if result.get("missing_receipt_items"):
-            reasons.append(f"缺失票据：{', '.join(result['missing_receipt_items'])}")
-        return "；".join(reasons) or "发票核验未通过。"

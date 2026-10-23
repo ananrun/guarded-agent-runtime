@@ -1,0 +1,15 @@
+{
+  "users": {
+    "default_user": {
+      "roles": ["framework_user"],
+      "allowed_actions": ["*"]
+    }
+  },
+  "user_aliases": {
+    "": "default_user",
+    "default": "default_user",
+    "demo": "default_user",
+    "user": "default_user",
+    "current_user": "default_user"
+  }
+}

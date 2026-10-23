@@ -1,0 +1,6 @@
+{
+  "block_on_intercepted_tool_call": true,
+  "required_source_tools": [],
+  "required_output_fields": [],
+  "forbidden_output_phrases": []
+}

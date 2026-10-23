@@ -1,0 +1,8 @@
+{
+  "general_model_instructions": [
+    "只能调用工具白名单中的工具。",
+    "不得编造工具没有返回的数据。",
+    "不得执行未授权的状态变更或不可逆动作。",
+    "最终回复前必须调用 guarded_output_review。"
+  ]
+}

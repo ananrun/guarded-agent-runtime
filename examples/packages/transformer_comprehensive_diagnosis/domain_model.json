@@ -1,0 +1,99 @@
+{
+  "name": "transformer_comprehensive_diagnosis",
+  "title": "综合研判（本体模型）",
+  "version": "1.0",
+  "scope": "变压器状态评估；不包含控制、告警确认或设备操作。",
+  "business_activities": [
+    {
+      "name": "状态数据准备",
+      "action": "获取设备状态数据",
+      "required_input": ["device_id", "sampling_time", "dissolved_gas", "operation_state"]
+    },
+    {
+      "name": "油色谱诊断分析",
+      "action": "三比值法诊断",
+      "required_input": ["three_ratio_code", "chromatography_result"]
+    },
+    {
+      "name": "故障树诊断分析",
+      "action": "故障树判据求值",
+      "required_input": ["fault_tree_evidence", "fault_tree_result"]
+    },
+    {
+      "name": "相似案例检索",
+      "action": "案例相似度计算",
+      "required_input": ["case_features", "similar_cases"]
+    }
+  ],
+  "business_rules": {
+    "oil_chromatography": {
+      "method": "三比值法",
+      "ratio_order": ["CH4/H2", "C2H2/C2H4", "C2H4/C2H6"],
+      "example_rule": {
+        "three_ratio_code": [0, 2, 0],
+        "diagnosis": "高温过热"
+      },
+      "result_requirement": "必须给出三比值编码、诊断结论和依据气体。"
+    },
+    "fault_tree": {
+      "method": "故障树判据求值",
+      "result_requirement": "必须给出命中的顶事件、判据路径、支持证据和置信度。",
+      "consistency_requirement": "油色谱结论与故障树结论冲突时，不得输出确定性故障结论，应标记为需人工复核。"
+    },
+    "case_retrieval": {
+      "method": "案例相似度计算",
+      "minimum_returned_cases": 1,
+      "result_requirement": "每个候选案例必须包含 case_id、相似度、故障类型和处置结果。"
+    },
+    "comprehensive_assessment": {
+      "required_evidence": ["chromatography_result", "fault_tree_result", "similar_cases"],
+      "agreement_action": "三个分析结果一致时，可输出初步诊断结论。",
+      "conflict_action": "任一关键结论冲突或证据不足时，输出人工复核建议。"
+    }
+  },
+  "axioms": [
+    {
+      "id": "AX-001",
+      "statement": "正常运行且无故障的变压器，特征气体含量应长期维持在较低水平；短时变化应结合趋势判断。"
+    },
+    {
+      "id": "AX-002",
+      "statement": "变压器内部故障会引起特征气体产生或增长；诊断必须同时保留气体浓度、采样时间和增长趋势。"
+    }
+  ],
+  "constraints": {
+    "gas_types": ["H2", "CH4", "C2H6", "C2H4", "C2H2", "CO", "CO2"],
+    "operation_states": ["正常", "注意", "异常", "严重"],
+    "data_quality": [
+      "所有特征气体浓度必须为非负数。",
+      "同一设备同一采样时刻的气体数据不得重复。",
+      "缺少任一三比值所需气体时，不得输出三比值法结论。",
+      "没有故障树证据或相似案例时，不得输出确定性综合结论。"
+    ],
+    "safety": [
+      "诊断结果仅用于状态研判，不得直接执行设备操作。",
+      "状态为异常或严重时，必须包含人工复核或处置建议。"
+    ]
+  },
+  "objects": {
+    "asset": ["变压器", "设备部件", "监测装置"],
+    "configuration": ["标准记录", "故障记录", "检测记录", "案例库"],
+    "analysis": ["设备状态记录", "异常状态", "综合研判记录", "诊断分析结果", "诊断问题"]
+  },
+  "relations": [
+    "变电站包含主变压器",
+    "主变压器包含设备部件",
+    "设备部件配置监测装置",
+    "监测装置产生检测记录",
+    "检测记录关联故障记录",
+    "案例库包含相似案例",
+    "综合研判记录引用诊断分析结果"
+  ],
+  "attributes": {
+    "transformer": ["变电站名称", "电压等级", "运维班组", "所属地市"],
+    "asset": ["设备名称", "设备编号", "设备型号", "额定容量", "投运日期", "生产厂家", "所属地市", "维护方式"],
+    "chromatography": ["检测记录", "检测时间", "H2", "CH4", "C2H6", "C2H4", "C2H2", "CO", "CO2", "总烃"],
+    "fault_tree": ["故障类型", "诊断参数", "置信度", "结果状态"],
+    "case": ["案例编号", "相似度", "故障类型", "处置结果"]
+  }
+}

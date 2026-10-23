@@ -1,0 +1,9 @@
+{
+  "name": "expense_audit_demo",
+  "request": {
+    "workflow_name": "expense_audit",
+    "user_id": "default",
+    "user_request": "帮我审核报销单",
+    "inputs": {"project": "project_a"}
+  }
+}

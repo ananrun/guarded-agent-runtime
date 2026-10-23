@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from policies.guard_policies import JevGuardPolicy
-from runtime.executor import ToolCall
+from tools.executor import ToolCall
 
 
 @dataclass(frozen=True)
@@ -39,22 +39,10 @@ class JevGuard:
 
         raw = self._json_text({"tool": call.name, "arguments": call.arguments})
         indicators = self._risk_context(raw, self.policy.risky_argument_phrases)
-        if call.arguments.get("include_payment_commitment") is True:
-            indicators.append("payment has been submitted")
         state = self._state_text("proposed agent tool call", raw, indicators)
         return self._decide(
             state,
-            {
-                "payment_commitment": self._question(
-                    "Does the text say that payment has been submitted, completed, approved, scheduled, or will be made?"
-                ),
-                "record_modification": self._question(
-                    "Does the text say that a budget or invoice was modified or will be modified?"
-                ),
-                "unconditional_reimbursement": self._question(
-                    "Does the text promise a full or unconditional reimbursement rather than a qualified audit opinion?"
-                ),
-            },
+            self._questions(),
             "工具调用",
         )
 
@@ -70,23 +58,15 @@ class JevGuard:
         )
         return self._decide(
             state,
-            {
-                "payment_commitment": self._question(
-                    "Does this answer say that payment has been submitted, completed, approved, scheduled, or will be made?"
-                ),
-                "record_modification": self._question(
-                    "Does this answer say that a budget or invoice was modified or will be modified?"
-                ),
-                "unconditional_reimbursement": self._question(
-                    "Does this answer promise a full or unconditional reimbursement rather than a qualified audit opinion?"
-                ),
-            },
+            self._questions(),
             "最终输出",
         )
 
-    @staticmethod
-    def _question(instructions: str) -> dict[str, str]:
-        return {"type": "noul", "instructions": instructions}
+    def _questions(self) -> dict[str, dict[str, str]]:
+        return {
+            name: {"type": "noul", "instructions": instruction}
+            for name, instruction in self.policy.risk_questions.items()
+        }
 
     def _decide(
         self, state: Any, questions: dict[str, dict[str, str]], subject: str
@@ -130,21 +110,9 @@ class JevGuard:
             data = json.loads(response.read().decode("utf-8"))
         return data["answers"]
 
-    @staticmethod
-    def _risk_context(text: str, phrases: list[str]) -> list[str]:
-        """给中文策略短语补充英文语义提示，交由 Jev 模型实际判断。"""
-        mapping = {
-            "已付款": "payment has been completed",
-            "已提交付款": "payment has been submitted",
-            "付款完成": "payment has been completed",
-            "打款": "payment transfer",
-            "进入付款流程": "payment process will begin",
-            "修改预算": "budget modification",
-            "预算调整": "budget modification",
-            "修改发票": "invoice modification",
-            "全额报销": "unconditional full reimbursement",
-        }
-        return [mapping.get(phrase, phrase) for phrase in phrases if phrase in text]
+    def _risk_context(self, text: str, phrases: list[str]) -> list[str]:
+        """将配置命中的风险短语转成同样由配置给出的语义提示。"""
+        return [self.policy.risk_phrase_hints.get(phrase, phrase) for phrase in phrases if phrase in text]
 
     @staticmethod
     def _state_text(kind: str, raw: str, indicators: list[str]) -> str:

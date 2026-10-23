@@ -1,10 +1,12 @@
 {
-  "forms": [
+  "datasets": {
+    "forms": [
     {
       "expense_id": "EXP-2026-001",
       "applicant": "张三",
       "project": "project_a",
       "currency": "CNY",
+      "item_count": 6,
       "items": [
     {
       "name": "机票1",
@@ -55,6 +57,7 @@
       "applicant": "李四",
       "project": "project_a",
       "currency": "CNY",
+      "item_count": 3,
       "items": [
         {
           "name": "住宿费（重复发票）",
@@ -79,5 +82,43 @@
         }
       ]
     }
-  ]
+    ]
+  },
+  "tool_results": {
+    "invoice_checks": {
+      "EXP-2026-001": {
+        "expense_id": "EXP-2026-001",
+        "duplicate_items": [],
+        "missing_receipt_items": [],
+        "passed": true
+      },
+      "EXP-2026-002": {
+        "expense_id": "EXP-2026-002",
+        "duplicate_items": ["住宿费（重复发票）", "会议住宿费（重复发票）"],
+        "missing_receipt_items": ["市内交通（缺失票据）"],
+        "passed": false
+      }
+    },
+    "reimbursement_calculations": {
+      "EXP-2026-001|project_a": {
+        "expense_id": "EXP-2026-001",
+        "eligible_before_limit": 27626.12,
+        "project_a_limit": 25000.0,
+        "project_a_reimbursable": 25000.0,
+        "over_project_a_limit": 2626.12,
+        "other_channel_amount": 5237.01,
+        "not_allowed_in_project_a": [
+          {"name": "保险", "category": "insurance", "amount": 245.0, "reason": "业务规则禁止计入项目A"},
+          {"name": "伙食费", "category": "meal", "amount": 2365.89, "reason": "业务规则禁止计入项目A"}
+        ],
+        "exceptions": []
+      }
+    },
+    "audit_opinions": {
+      "EXP-2026-001": {
+        "expense_id": "EXP-2026-001",
+        "opinion": "项目A可报销 25000.0 元；其他渠道承担 5237.01 元；餐费、保险费不得计入项目A；本意见不执行付款。"
+      }
+    }
+  }
 }

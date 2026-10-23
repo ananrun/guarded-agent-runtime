@@ -1,0 +1,9 @@
+{
+  "tool_results": {
+    "status_data": {"device_id": "TR-001", "operation_state": "注意", "sampling_time": "2026-10-22T10:00:00", "completed": true},
+    "three_ratio": {"completed": true, "three_ratio_code": [0, 2, 0], "diagnosis": "高温过热", "evidence_gases": ["C2H4", "C2H6"]},
+    "fault_tree": {"completed": true, "top_event": "过热故障", "confidence": 0.86},
+    "case_retrieval": {"completed": true, "similar_cases": [{"case_id": "CASE-001", "similarity": 0.91, "fault_type": "过热故障", "disposal_result": "建议检修"}]},
+    "assessment": {"consistent": true, "message": "综合研判完成：多项证据一致，建议人工复核。", "assessment": "初步判定为过热风险，建议人工复核。"}
+  }
+}

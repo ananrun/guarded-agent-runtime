@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -10,38 +11,39 @@ from gateway.service import GuardGatewayService
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # MCP 模式下 stdout 要留给协议通信，运行日志写入 logs/ 文件。
-service = GuardGatewayService(base_dir=BASE_DIR)
+package_dir = Path(os.environ["GUARDED_PACKAGE_DIR"]) if os.environ.get("GUARDED_PACKAGE_DIR") else None
+service = GuardGatewayService(base_dir=BASE_DIR, package_dir=package_dir)
 
 # 给外部平台暴露的 MCP 服务。QwenPaw 接入后看到的是下面这些 tool。
 mcp = FastMCP(
     "guarded-agent-runtime",
     instructions=(
-        "这是通用 Guard Gateway。先调用 guarded_context_build 获取 session_id；"
-        "所有业务工具必须通过 guarded_tool_call；最终回复必须调用 guarded_output_review。"
+        "这是通用 Guard Gateway。优先调用 guarded_workflow_run 执行声明式工作流；"
+        "分步模式先调用 guarded_context_build，所有业务工具必须经 guarded_tool_call，"
+        "最终回复必须经 guarded_output_review。"
     ),
 )
 
 
 @mcp.tool()
-def guarded_expense_audit(
+def guarded_workflow_run(
+    workflow_name: str,
     user_request: str,
-    user_id: str = "auditor_001",
-    expense_id: str | None = None,
-    project: str = "project_a",
+    user_id: str = "default",
+    inputs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """一站式受控报销审核：内部强制执行事前约束、事中拦截和事后复核。"""
+    """执行业务包中声明的任意受控工作流。"""
 
-    # 推荐给 QwenPaw 的默认入口：用户只说“帮我审核报销单”时，调用这一个工具即可。
-    return service.audit_expense(
+    return service.run_workflow(
+        workflow_name=workflow_name,
         user_request=user_request,
         user_id=user_id,
-        expense_id=expense_id,
-        project=project,
+        inputs=inputs,
     )
 
 
 @mcp.tool()
-def guarded_context_build(user_request: str, user_id: str = "auditor_001") -> dict[str, Any]:
+def guarded_context_build(user_request: str, user_id: str = "default") -> dict[str, Any]:
     """事前约束：生成受控上下文、工具白名单、禁止动作和业务规则。"""
 
     # 手动编排模式第一步：先拿 session_id 和可执行边界。
@@ -91,7 +93,7 @@ def guarded_audit_logs(session_id: str | None = None) -> dict[str, Any]:
 def guarded_policy_reload() -> dict[str, Any]:
     """重新加载本地策略配置。"""
 
-    # 修改 config/policies/*.json 后调用，避免重启 MCP 服务。
+    # 修改 config/*.json 后调用，避免重启 MCP 服务。
     return service.reload_policy()
 
 

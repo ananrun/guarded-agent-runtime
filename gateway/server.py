@@ -27,7 +27,7 @@ class GuardGatewayHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         # HTTP 路由对应 MCP 工具：外部平台也可以用 HTTP 方式集成。
         routes = {
-            "/expense/audit": self._expense_audit,
+            "/workflows/run": self._workflow_run,
             "/context/build": self._context_build,
             "/attempt/start": self._attempt_start,
             "/tools/call": self._tools_call,
@@ -44,18 +44,17 @@ class GuardGatewayHandler(BaseHTTPRequestHandler):
         # Pre-Guard HTTP 入口。
         body = self._read_body()
         return self.service.build_context(
-            user_id=body.get("user_id", "auditor_001"),
+            user_id=body.get("user_id", "default"),
             user_request=body["user_request"],
         )
 
-    def _expense_audit(self) -> dict[str, Any]:
-        # 一体化 HTTP 入口：内部自动完成三阶段流程。
+    def _workflow_run(self) -> dict[str, Any]:
         body = self._read_body()
-        return self.service.audit_expense(
-            user_id=body.get("user_id", "auditor_001"),
+        return self.service.run_workflow(
+            workflow_name=body["workflow_name"],
             user_request=body["user_request"],
-            expense_id=body.get("expense_id"),
-            project=body.get("project", "project_a"),
+            user_id=body.get("user_id", "default"),
+            inputs=body.get("inputs", {}),
         )
 
     def _tools_call(self) -> dict[str, Any]:
@@ -117,5 +116,5 @@ def run_gateway_server(host: str = "127.0.0.1", port: int = 8765) -> None:
     GuardGatewayHandler.service = GuardGatewayService(base_dir=base_dir)
     server = ThreadingHTTPServer((host, port), GuardGatewayHandler)
     print(f"Guard Gateway listening on http://{host}:{port}")
-    print("Endpoints: POST /context/build, POST /attempt/start, POST /tools/call, POST /review/output")
+    print("Endpoints: POST /workflows/run, POST /context/build, POST /attempt/start, POST /tools/call, POST /review/output")
     server.serve_forever()

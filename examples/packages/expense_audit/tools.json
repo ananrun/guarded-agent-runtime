@@ -1,0 +1,45 @@
+{
+  "provider_factory": "tools.configured_provider:create_provider",
+  "data_file": "data.json",
+  "tools": [
+    {
+      "name": "list_expense_forms",
+      "operation": {
+        "kind": "list",
+        "source": "datasets.forms",
+        "fields": ["expense_id", "applicant", "project", "currency", "item_count"]
+      },
+      "required_permission": "expense:list",
+      "schema": {}
+    },
+    {
+      "name": "read_expense_form",
+      "operation": {"kind": "find", "source": "datasets.forms", "match_argument": "expense_id"},
+      "required_permission": "expense:read",
+      "schema": {"expense_id": "str"}
+    },
+    {
+      "name": "check_invoice",
+      "operation": {"kind": "lookup", "source": "tool_results.invoice_checks", "key": "{expense_id}"},
+      "required_permission": "invoice:check",
+      "schema": {"expense_id": "str"}
+    },
+    {
+      "name": "calculate_reimbursement",
+      "operation": {"kind": "lookup", "source": "tool_results.reimbursement_calculations", "key": "{expense_id}|{project}"},
+      "required_permission": "reimbursement:calculate",
+      "schema": {"expense_id": "str", "project": "str"}
+    },
+    {
+      "name": "generate_audit_opinion",
+      "operation": {"kind": "lookup", "source": "tool_results.audit_opinions", "key": "{expense_id}"},
+      "required_permission": "audit_opinion:generate",
+      "optional": ["include_payment_commitment"],
+      "schema": {
+        "expense_id": "str",
+        "calculation": "dict",
+        "include_payment_commitment": "bool"
+      }
+    }
+  ]
+}

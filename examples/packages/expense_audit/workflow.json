@@ -1,0 +1,61 @@
+{
+  "name": "expense_audit",
+  "task_type": "travel_expense_audit",
+  "steps": [
+    {"id": "forms", "kind": "tool", "tool": "list_expense_forms"},
+    {
+      "kind": "assign",
+      "values": {"expense_id": "$input.expense_id ?? $steps.forms.items[0].expense_id"}
+    },
+    {
+      "id": "expense",
+      "kind": "tool",
+      "tool": "read_expense_form",
+      "arguments": {"expense_id": "$input.expense_id"}
+    },
+    {
+      "id": "invoice",
+      "kind": "tool",
+      "tool": "check_invoice",
+      "arguments": {"expense_id": "$input.expense_id"}
+    },
+    {
+      "kind": "require",
+      "path": "$steps.invoice.passed",
+      "equals": true,
+      "reason": "发票核验未通过：重复发票={{steps.invoice.duplicate_items}}；缺失票据={{steps.invoice.missing_receipt_items}}"
+    },
+    {
+      "id": "calculation",
+      "kind": "tool",
+      "tool": "calculate_reimbursement",
+      "arguments": {"expense_id": "$input.expense_id", "project": "$input.project"}
+    },
+    {
+      "id": "opinion",
+      "kind": "tool",
+      "tool": "generate_audit_opinion",
+      "arguments": {
+        "expense_id": "$input.expense_id",
+        "calculation": "$steps.calculation",
+        "include_payment_commitment": false
+      }
+    }
+  ],
+  "output": {
+    "status": "passed",
+    "message": "$steps.opinion.opinion",
+    "project_a_reimbursable": "$steps.calculation.project_a_reimbursable",
+    "other_channel_amount": "$steps.calculation.other_channel_amount",
+    "not_allowed_in_project_a": "$steps.calculation.not_allowed_in_project_a",
+    "exceptions": "$steps.calculation.exceptions",
+    "source_tools": [
+      "list_expense_forms",
+      "read_expense_form",
+      "check_invoice",
+      "calculate_reimbursement",
+      "generate_audit_opinion"
+    ],
+    "forbidden_commitments": []
+  }
+}
