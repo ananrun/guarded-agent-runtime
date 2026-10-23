@@ -19,19 +19,6 @@
     ]
   },
   "tool_results": {
-    "three_ratio": {
-      "DGA-TR001-20261022": {
-        "completed": true,
-        "method": "IEC 60599 / GB/T 7252 三比值法",
-        "ratios": {"C2H2_C2H4": 0.002, "CH4_H2": 0.4, "C2H4_C2H6": 3.13},
-        "three_ratio_code": [0, 1, 2],
-        "diagnosis": "高温过热风险",
-        "evidence_gases": ["C2H4", "H2", "C2H6"],
-        "duval_triangle": {"method": "Duval Triangle 1", "zone": "T3", "diagnosis": "高温热故障倾向"},
-        "key_gas": {"gas": "C2H4", "finding": "乙烯占总烃比例较高，符合过热特征"},
-        "generation_rate": {"period_days": 92, "C2H4_increase_ppm": 89, "C2H4_ppm_per_day": 0.97, "finding": "乙烯持续上升，需缩短跟踪周期"}
-      }
-    },
     "fault_tree": {
       "DGA-TR001-20261022": {
         "completed": true,

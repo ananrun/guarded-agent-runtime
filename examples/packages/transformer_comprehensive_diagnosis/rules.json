@@ -1,0 +1,30 @@
+{
+  "rule_sets": {
+    "three_ratio": {
+      "derive": {
+        "C2H2_C2H4": {"op": "divide", "left": "$record.dissolved_gases_ppm.C2H2", "right": "$record.dissolved_gases_ppm.C2H4", "round": 3},
+        "CH4_H2": {"op": "divide", "left": "$record.dissolved_gases_ppm.CH4", "right": "$record.dissolved_gases_ppm.H2", "round": 2},
+        "C2H4_C2H6": {"op": "divide", "left": "$record.dissolved_gases_ppm.C2H4", "right": "$record.dissolved_gases_ppm.C2H6", "round": 2},
+        "C2H4_increase_ppm": {"op": "subtract", "left": "$record.dissolved_gases_ppm.C2H4", "right": "$record.history[1].C2H4"},
+        "C2H4_ppm_per_day": {"op": "divide", "left": "$derived.C2H4_increase_ppm", "right": 92, "round": 2}
+      },
+      "rules": [
+        {
+          "id": "DGA-THERMAL-001",
+          "when": {"all": [{"left": "$derived.C2H4_C2H6", "op": "gt", "right": 3}, {"left": "$record.dissolved_gases_ppm.C2H2", "op": "lt", "right": 1}]},
+          "result": {
+            "method": "IEC 60599 / GB/T 7252 三比值法",
+            "ratios": {"C2H2_C2H4": "$derived.C2H2_C2H4", "CH4_H2": "$derived.CH4_H2", "C2H4_C2H6": "$derived.C2H4_C2H6"},
+            "three_ratio_code": [0, 1, 2],
+            "diagnosis": "高温过热风险",
+            "evidence_gases": ["C2H4", "H2", "C2H6"],
+            "duval_triangle": {"method": "Duval Triangle 1", "zone": "T3", "diagnosis": "高温热故障倾向"},
+            "key_gas": {"gas": "C2H4", "finding": "乙烯占总烃比例较高，符合过热特征"},
+            "generation_rate": {"period_days": 92, "C2H4_increase_ppm": "$derived.C2H4_increase_ppm", "C2H4_ppm_per_day": "$derived.C2H4_ppm_per_day", "finding": "乙烯持续上升，需缩短跟踪周期"}
+          }
+        }
+      ],
+      "default": {"method": "IEC 60599 / GB/T 7252 三比值法", "diagnosis": "未命中已配置诊断规则", "evidence_gases": [], "duval_triangle": {"method": "Duval Triangle 1", "zone": "未知", "diagnosis": "需人工复核"}, "key_gas": {"gas": null, "finding": "需要补充或复核规则"}}
+    }
+  }
+}

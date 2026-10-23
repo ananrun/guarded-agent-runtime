@@ -4,3 +4,6 @@ __pycache__/
 # 日志目录保留，运行时内容不入库。
 logs/*.log
 logs/*.jsonl
+logs/*
+
+packages/*

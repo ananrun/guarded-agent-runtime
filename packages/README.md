@@ -8,6 +8,7 @@ packages/<包名>/
 ├─ tools.json         # 必选：可调用工具及权限、参数契约
 ├─ workflow.json      # 必选：工具执行顺序、拦截条件、最终输出
 ├─ data.json          # 可选：配置数据、模拟数据、预置查询结果
+├─ rules.json         # 可选：公式、条件和命中结果，由框架规则引擎计算
 ├─ domain_model.json  # 可选：对象、关系、公理、领域约束
 └─ demo.json          # 可选：本地/MCP 演示请求
 ```
@@ -30,7 +31,7 @@ packages/<包名>/
 - `name`：包唯一名称；工具归属和隔离依据。
 - `task_type`：任务类型标识。
 - `keywords`：用户请求包含其中任一词时，Pre-Guard 选择此包。
-- `files`：必须声明 `workflow`、`tools`；可补充 `data`、`domain_model`、`demo`。
+- `files`：必须声明 `workflow`、`tools`；可补充 `data`、`rules`、`domain_model`、`demo`。
 - `rules`：原样传入受控上下文，由工作流或外部适配器使用。
 - `model_instructions`：当前包给 Agent 的约束。
 
@@ -57,6 +58,29 @@ packages/<包名>/
 - `operation`：配置数据适配器的操作，支持 `list`、`find`、`lookup`。
 - `data_file`：相对于当前业务包目录的配置数据文件；通常写 `data.json`。
 - `callable`：真实外部系统可改用 `"外部模块:函数"`；适配器应放在框架项目外。
+
+### 参数化规则计算
+
+`tools.json` 声明 `rule_file` 后，工具可使用 `rule_evaluate`。框架从 `source` 找到当前记录，按 `rules.json` 计算派生参数并匹配规则；模型不参与计算。
+
+```json
+{
+  "rule_file": "rules.json",
+  "tools": [{
+    "name": "evaluate_policy",
+    "operation": {
+      "kind": "rule_evaluate",
+      "source": "datasets.records",
+      "match_argument": "record_id",
+      "rule_set": "policy"
+    },
+    "required_permission": "policy:evaluate",
+    "schema": {"record_id": "str"}
+  }]
+}
+```
+
+`rules.json` 的 `derive` 仅支持 `add`、`subtract`、`multiply`、`divide` 和可选 `round`；规则条件支持 `all`、`any`、`eq`、`ne`、`gt`、`gte`、`lt`、`lte`、`in`。变量用 `$record...` 引用当前记录，用 `$derived...` 引用已计算参数。每次结果都会返回 `derived` 和 `matched_rules`，供审计追溯。
 
 ## `workflow.json`
 
