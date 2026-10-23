@@ -51,8 +51,8 @@ class GuardGatewayHandler(BaseHTTPRequestHandler):
     def _workflow_run(self) -> dict[str, Any]:
         body = self._read_body()
         return self.service.run_workflow(
-            workflow_name=body["workflow_name"],
             user_request=body["user_request"],
+            workflow_name=body.get("workflow_name"),
             user_id=body.get("user_id", "default"),
             inputs=body.get("inputs", {}),
         )

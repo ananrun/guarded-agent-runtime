@@ -1,9 +1,61 @@
 {
+  "datasets": {
+    "inspections": [
+      {
+        "inspection_id": "DGA-TR001-20261022",
+        "completed": true,
+        "sampling_time": "2026-10-22T10:00:00",
+        "device": {"device_id": "TR-001", "model": "SFSZ11-50000/110", "capacity_mva": 50, "voltage_kv": 110, "service_years": 12},
+        "operation": {"operation_state": "注意", "oil_temperature_c": 68, "load_percent": 82, "last_overhaul_date": "2024-06-15", "oil_treatment_record": "2025-11-03 真空滤油"},
+        "dissolved_gases_ppm": {"H2": 145, "CH4": 58, "C2H2": 0.4, "C2H4": 235, "C2H6": 75, "CO": 420, "CO2": 4100, "TH": 368.4, "TGC": 933.4},
+        "oil_quality": {"water_mg_l": 14, "acid_value_mg_koh_g": 0.08, "breakdown_voltage_kv": 56},
+        "history": [
+          {"sampling_time": "2026-04-22", "H2": 92, "CH4": 39, "C2H2": 0.2, "C2H4": 88, "C2H6": 51, "CO": 360, "CO2": 3900},
+          {"sampling_time": "2026-07-22", "H2": 113, "CH4": 47, "C2H2": 0.3, "C2H4": 146, "C2H6": 62, "CO": 388, "CO2": 4000},
+          {"sampling_time": "2026-10-22", "H2": 145, "CH4": 58, "C2H2": 0.4, "C2H4": 235, "C2H6": 75, "CO": 420, "CO2": 4100}
+        ],
+        "symptoms": ["负载高峰时油温较历史同期升高约 6℃", "未发现异常声响、油位变化或保护动作"]
+      }
+    ]
+  },
   "tool_results": {
-    "status_data": {"device_id": "TR-001", "operation_state": "注意", "sampling_time": "2026-10-22T10:00:00", "completed": true},
-    "three_ratio": {"completed": true, "three_ratio_code": [0, 2, 0], "diagnosis": "高温过热", "evidence_gases": ["C2H4", "C2H6"]},
-    "fault_tree": {"completed": true, "top_event": "过热故障", "confidence": 0.86},
-    "case_retrieval": {"completed": true, "similar_cases": [{"case_id": "CASE-001", "similarity": 0.91, "fault_type": "过热故障", "disposal_result": "建议检修"}]},
-    "assessment": {"consistent": true, "message": "综合研判完成：多项证据一致，建议人工复核。", "assessment": "初步判定为过热风险，建议人工复核。"}
+    "three_ratio": {
+      "DGA-TR001-20261022": {
+        "completed": true,
+        "method": "IEC 60599 / GB/T 7252 三比值法",
+        "ratios": {"C2H2_C2H4": 0.002, "CH4_H2": 0.4, "C2H4_C2H6": 3.13},
+        "three_ratio_code": [0, 1, 2],
+        "diagnosis": "高温过热风险",
+        "evidence_gases": ["C2H4", "H2", "C2H6"],
+        "duval_triangle": {"method": "Duval Triangle 1", "zone": "T3", "diagnosis": "高温热故障倾向"},
+        "key_gas": {"gas": "C2H4", "finding": "乙烯占总烃比例较高，符合过热特征"},
+        "generation_rate": {"period_days": 92, "C2H4_increase_ppm": 89, "C2H4_ppm_per_day": 0.97, "finding": "乙烯持续上升，需缩短跟踪周期"}
+      }
+    },
+    "fault_tree": {
+      "DGA-TR001-20261022": {
+        "completed": true,
+        "top_event": "内部过热风险",
+        "confidence": 0.86,
+        "possible_causes": ["局部接触不良", "高负载下局部热点", "冷却效率下降"],
+        "recommended_checks": ["复测油色谱并计算产气速率", "核查冷却系统和负载曲线", "结合红外、绕组直流电阻等试验人工复核"]
+      }
+    },
+    "case_retrieval": {
+      "DGA-TR001-20261022": {
+        "completed": true,
+        "similar_cases": [
+          {"case_id": "CASE-001", "similarity": 0.91, "fault_type": "高温过热", "disposal_result": "检修确认局部接触不良"},
+          {"case_id": "CASE-014", "similarity": 0.79, "fault_type": "冷却异常导致过热", "disposal_result": "恢复冷却能力后气体增长趋缓"}
+        ]
+      }
+    },
+    "assessment": {
+      "DGA-TR001-20261022": {
+        "consistent": true,
+        "message": "综合研判完成：三比值、杜瓦尔三角形、关键气体和趋势证据均指向高温过热风险，应转人工复核。",
+        "assessment": "当前不支持自动处置。建议尽快复测油色谱，跟踪乙烯产气速率，并核查冷却系统、负载和可能的局部接触不良。"
+      }
+    }
   }
 }

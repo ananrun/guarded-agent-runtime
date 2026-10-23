@@ -74,7 +74,7 @@ packages/<包名>/
 }
 ```
 
-变量引用以 `$` 开头，例如 `$input.contract_id`、`$steps.contract.valid`；`??` 可提供默认值。
+变量引用以 `$` 开头，例如 `$input.contract_id`、`$steps.contract.valid`；`??` 可提供默认值，例如 `$input.id ?? 'default-id'`。
 
 ## 可选文件
 

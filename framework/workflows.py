@@ -67,7 +67,10 @@ class WorkflowEngine:
             if kind != "tool":
                 raise ValueError(f"工作流 {workflow.name} 包含未知步骤类型：{kind}")
 
-            result = call_tool(step["tool"], self._resolve(step.get("arguments", {}), values))
+            arguments = self._resolve(step.get("arguments", {}), values)
+            # 未解析到的变量视为未提供，交给工具 Schema 返回统一的“缺少参数”提示。
+            arguments = {key: value for key, value in arguments.items() if value is not None}
+            result = call_tool(step["tool"], arguments)
             tool_results.append(result)
             if not result["allowed"]:
                 return {
@@ -90,6 +93,9 @@ class WorkflowEngine:
             return [self._resolve(item, values) for item in value]
         if isinstance(value, str) and value.startswith("$"):
             for candidate in value[1:].split(" ?? "):
+                candidate = candidate.strip()
+                if len(candidate) >= 2 and candidate[0] == candidate[-1] and candidate[0] in {"'", "\""}:
+                    return candidate[1:-1]
                 resolved = self._get_path(candidate.lstrip("$"), values)
                 if resolved is not None:
                     return resolved

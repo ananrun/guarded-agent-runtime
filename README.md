@@ -45,6 +45,23 @@ python app.py
 
 MCP 模式不需要手动启动服务：客户端按下面的配置自动执行 python -m gateway.mcp_server。
 
+## 快速验证（不经过聊天模型）
+
+先启动 HTTP 网关：
+
+```powershell
+python app.py
+```
+
+另开一个 PowerShell 窗口，直接调用已放入 packages 的业务包：
+
+```powershell
+$body = @{ user_request = '请对变压器油色谱进行综合研判' } | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8765/workflows/run -Method Post -ContentType 'application/json; charset=utf-8' -Body $body
+```
+
+若返回 status=success，说明业务包、三阶段 Guard 和仿真数据均已生效。Jev 只是风险判断后端，不会主动读取业务包或调用 MCP；自然语言聊天必须由已注册本 MCP 的 Agent 客户端发起。
+
 JevOS 的地址、启动目录和命令均配置在 `config/jev.json`：
 
 ```powershell
@@ -61,16 +78,36 @@ Invoke-RestMethod http://127.0.0.1:8017/health
     "guarded-agent-runtime": {
       "command": "python",
       "args": ["-m", "gateway.mcp_server"],
-      "cwd": "E:\\.Aproject\\desktop\\Ontology\\guarded-agent-runtime",
-      "env": {
-        "GUARDED_PACKAGE_DIR": "D:\\business-packages"
-      }
+      "cwd": "E:\\.Aproject\\desktop\\Ontology\\guarded-agent-runtime"
     }
   }
 }
 ```
 
 外部 Agent 优先调用 `guarded_workflow_run`。MCP 的 stdio 服务由客户端自动启动。
+只需传入 `user_request`；框架会按业务包关键词自动选择工作流。`workflow_name` 仅用于强制指定流程。
+
+### QwenPaw
+
+在 QwenPaw 控制台切换到你当前对话使用的智能体，进入 智能体 → MCP → + 创建，粘贴以下配置：
+
+```json
+{
+  "mcpServers": {
+    "guarded-agent-runtime": {
+      "name": "受控业务框架",
+      "enabled": true,
+      "command": "D:\\Python\\Python313\\python.exe",
+      "args": ["-m", "gateway.mcp_server"],
+      "cwd": "E:\\.Aproject\\desktop\\Ontology\\guarded-agent-runtime"
+    }
+  }
+}
+```
+
+创建成功后，该智能体的 MCP 页面必须显示 guarded_workflow_run 等 7 个工具。新开一个聊天，再发送“请对变压器油色谱进行综合研判”。若工具列表为空，或仍不调用工具，请确认你配置的是当前智能体，并在其运行配置中启用工具调用。
+
+默认加载项目中的 packages 目录。只有业务包放在项目外时，才设置 GUARDED_PACKAGE_DIR 为该外部目录；修改 MCP 配置后必须重启 MCP 客户端。
 
 ## 接入业务
 

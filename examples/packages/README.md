@@ -13,6 +13,6 @@ data.json 不是框架规则，也不是用户对话输入；它只是本地演�
 
 报销示例同时演示两类数据：先从 datasets.forms 读取原始单据，再从 tool_results 读取发票核验、金额计算、审计意见等服务返回。
 
-设备诊断示例只有 tool_results：状态准备、三比值、故障树等本应由不同算法或平台提供，示例直接固定其返回结果。
+设备诊断示例通过 inputs.inspection_id 选择 datasets.inspections 中的一份样本；未传时使用演示默认样本。样本含完整油中溶解气体、设备、油质、历史趋势和现象数据。三比值、杜瓦尔、关键气体、产气速率、故障树和案例检索的仿真结果位于 tool_results。
 
 生产接入时，通常保留 package.json、tools.json、workflow.json，并将 tools.json 的 callable 指向外部适配器；此时不需要 data.json。

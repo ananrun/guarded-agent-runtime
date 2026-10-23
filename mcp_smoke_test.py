@@ -27,6 +27,8 @@ async def main() -> None:
         raise FileNotFoundError(f"未找到 demo.json：{package_dir}")
     with demo_path.open(encoding="utf-8") as fh:
         request = json.load(fh)["request"]
+    # 验证调用方只提供自然语言请求时，框架仍可按关键词自动匹配业务包。
+    request.pop("workflow_name", None)
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "gateway.mcp_server"],

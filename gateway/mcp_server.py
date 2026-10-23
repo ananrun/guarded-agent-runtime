@@ -19,6 +19,9 @@ mcp = FastMCP(
     "guarded-agent-runtime",
     instructions=(
         "这是通用 Guard Gateway。优先调用 guarded_workflow_run 执行声明式工作流；"
+        "收到业务请求时只需传 user_request，框架会按业务包关键词自动选择工作流；"
+        "命中业务包的请求必须先调用受控工作流，不得先用通用知识自行回答或追问数据；"
+        "仅当工作流返回 blocked 或 review_failed 时，才按返回原因要求补充信息或转人工；"
         "分步模式先调用 guarded_context_build，所有业务工具必须经 guarded_tool_call，"
         "最终回复必须经 guarded_output_review。"
     ),
@@ -27,16 +30,16 @@ mcp = FastMCP(
 
 @mcp.tool()
 def guarded_workflow_run(
-    workflow_name: str,
     user_request: str,
+    workflow_name: str | None = None,
     user_id: str = "default",
     inputs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """执行业务包中声明的任意受控工作流。"""
+    """先调用此工具处理业务请求；按关键词自动匹配工作流，阻断时返回可执行原因。"""
 
     return service.run_workflow(
-        workflow_name=workflow_name,
         user_request=user_request,
+        workflow_name=workflow_name,
         user_id=user_id,
         inputs=inputs,
     )

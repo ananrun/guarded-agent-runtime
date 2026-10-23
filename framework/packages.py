@@ -20,6 +20,11 @@ class PackageCatalog:
                 relative_path = item["files"].get(key)
                 if not relative_path or not (path.parent / relative_path).is_file():
                     raise ValueError(f"业务包 {item['name']} 缺少文件：{key}")
+            with (path.parent / item["files"]["workflow"]).open(encoding="utf-8") as fh:
+                workflow = json.load(fh)
+            if not workflow.get("name"):
+                raise ValueError(f"业务包 {item['name']} 的工作流缺少 name")
+            item["_workflow_name"] = workflow["name"]
             self.items.append(item)
 
     def match(self, request: str) -> dict[str, Any] | None:

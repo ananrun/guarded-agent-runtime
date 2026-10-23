@@ -135,12 +135,17 @@ class GuardGatewayService:
 
     def run_workflow(
         self,
-        workflow_name: str,
         user_request: str,
+        workflow_name: str | None = None,
         user_id: str = "default",
         inputs: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """执行配置文件声明的受控工作流，是所有业务场景的通用入口。"""
+        if workflow_name is None:
+            package = self.package_catalog.match(user_request)
+            if package is None:
+                raise ValueError("未匹配到业务包；请补充业务关键词或显式提供 workflow_name。")
+            workflow_name = package["_workflow_name"]
         workflow = self.workflow_engine.load(workflow_name)
         context_response = self.build_context(user_id=user_id, user_request=user_request)
         session_id = context_response["session_id"]

@@ -4,6 +4,6 @@
     "workflow_name": "transformer_comprehensive_diagnosis",
     "user_request": "请对变压器油色谱进行综合研判",
     "user_id": "default",
-    "inputs": {}
+    "inputs": {"inspection_id": "DGA-TR001-20261022"}
   }
 }
